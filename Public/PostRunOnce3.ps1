@@ -1,124 +1,156 @@
 function PostRunOnce3 {
+  <#
+  .SYNOPSIS
+  Executes post-run operations for the third phase of the migration process.
+
+  .DESCRIPTION
+  The PostRunOnce3 function performs cleanup tasks after migration, including removing temporary user accounts, disabling local user accounts, removing scheduled tasks, clearing OneDrive cache, and setting registry values.
+
+  .PARAMETER TempUser
+  The name of the temporary user account to be removed.
+
+  .PARAMETER RegistrySettings
+  A hashtable of registry settings to be applied.
+
+  .PARAMETER MigrationDirectories
+  An array of directories to be removed as part of migration cleanup.
+
+  .EXAMPLE
+  $params = @{
+      TempUser = "TempUser"
+      RegistrySettings = @{
+          "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" = @{
+              "dontdisplaylastusername" = @{
+                  "Type" = "DWORD"
+                  "Data" = "0"
+              }
+              "legalnoticecaption" = @{
+                  "Type" = "String"
+                  "Data" = $null
+              }
+              "legalnoticetext" = @{
+                  "Type" = "String"
+                  "Data" = $null
+              }
+          }
+          "HKLM:\Software\Policies\Microsoft\Windows\Personalization" = @{
+              "NoLockScreen" = @{
+                  "Type" = "DWORD"
+                  "Data" = "0"
+              }
+          }
+      }
+      MigrationDirectories = @(
+          "C:\ProgramData\AADMigration\Files",
+          "C:\ProgramData\AADMigration\Scripts",
+          "C:\ProgramData\AADMigration\Toolkit"
+      )
+  }
+  PostRunOnce3 @params
+  Executes the post-run operations.
+  #>
+
   [CmdletBinding()]
-  param ()
+  param (
+      [Parameter(Mandatory = $true)]
+      [string]$TempUser,
+
+      [Parameter(Mandatory = $true)]
+      [hashtable]$RegistrySettings,
+
+      [Parameter(Mandatory = $true)]
+      [string[]]$MigrationDirectories
+  )
 
   Begin {
-    Write-EnhancedLog -Message "Starting PostRunOnce3 function" -Level "INFO"
+      Write-EnhancedLog -Message "Starting PostRunOnce3 function" -Level "Notice"
+      Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
   }
 
   Process {
-    try {
-      # Start-Transcript -Path C:\ProgramData\AADMigration\Logs\AD2AADJ-R3.txt -Append -Force
-      $MigrationConfig = Import-LocalizedData -BaseDirectory "C:\ProgramData\AADMigration\scripts" -FileName "MigrationConfig.psd1"
-      $TempUser = $MigrationConfig.TempUser
+      try {
+          Start-Transcript -Path "C:\ProgramData\AADMigration\Logs\AD2AADJ-R3.txt" -Append -Force
 
-      # Function to set registry values
-      function Set-RegistryValue {
-        [CmdletBinding()]
-        param (
-          [string]$RegKeyPath,
-          [string]$RegValName,
-          [string]$RegValType,
-          [string]$RegValData
-        )
+          # Remove temporary user account
+          $removeUserParams = @{
+              UserName = $TempUser
+          }
+          Remove-LocalUserAccount @removeUserParams
 
-        # Test to see if the registry key exists, if not, create it
-        $RegKeyPathExists = Test-Path -Path $RegKeyPath
-        if (-not $RegKeyPathExists) {
-          New-Item -Path $RegKeyPath -Force | Out-Null
-        }
+          # Disable local user accounts
+          Disable-LocalUserAccounts
 
-        # Check to see if the value exists
-        try {
-          $CurrentValue = Get-ItemPropertyValue -Path $RegKeyPath -Name $RegValName
-        }
-        catch {
-          # If the value does not exist, catch the error and create the key
-          Set-ItemProperty -Path $RegKeyPath -Name $RegValName -Type $RegValType -Value $RegValData -Force
-        }
+          # Set registry values
+          foreach ($regPath in $RegistrySettings.Keys) {
+              foreach ($regName in $RegistrySettings[$regPath].Keys) {
+                  $regSetting = $RegistrySettings[$regPath][$regName]
+                  $regParams = @{
+                      RegKeyPath = $regPath
+                      RegValName = $regName
+                      RegValType = $regSetting["Type"]
+                      RegValData = $regSetting["Data"]
+                  }
+                  Set-RegistryValue @regParams
+              }
+          }
 
-        if ($CurrentValue -ne $RegValData) {
-          # If the value exists but the data is wrong, update the value
-          Set-ItemProperty -Path $RegKeyPath -Name $RegValName -Type $RegValType -Value $RegValData -Force
-        }
+          # Remove scheduled tasks
+          $taskParams = @{
+              TaskPath = "AAD Migration"
+          }
+          Remove-ScheduledTasks @taskParams
+
+          # Remove migration files
+          $removeFilesParams = @{
+              Directories = $MigrationDirectories
+          }
+          Remove-MigrationFiles @removeFilesParams
+
+          # Clear OneDrive cache
+          Clear-OneDriveCache
+
+          Stop-Transcript
       }
-
-      # Clean up after ourselves
-      # Remove local user account created for migration
-      Remove-LocalUser -Name $TempUser
-
-      # Remove autologon settings and default user and password from registry
-      $RegPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
-      Set-ItemProperty -Path $RegPath -Name "AutoAdminLogon" -Value "0" -Type String
-      Set-ItemProperty -Path $RegPath -Name "DefaultUsername" -Value $null -Type String
-      Set-ItemProperty -Path $RegPath -Name "DefaultPassword" -Value $null -Type String
-
-      # Remove setting to not show local user
-      Write-EnhancedLog -Message "Setting key to show last logged in user" -Level "INFO"
-      Set-RegistryValue -RegKeyPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -RegValName "dontdisplaylastusername" -RegValType "DWORD" -RegValData "0"
-
-      # Clear legal notice caption
-      Write-EnhancedLog -Message "Setting legal notice caption" -Level "INFO"
-      Set-RegistryValue -RegKeyPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -RegValName "legalnoticecaption" -RegValType "String" -RegValData $null
-
-      # Clear legal notice text
-      Write-EnhancedLog -Message "Setting legal notice text" -Level "INFO"
-      Set-RegistryValue -RegKeyPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -RegValName "legalnoticetext" -RegValType "String" -RegValData $null
-
-      # Re-enable lock screen
-      Write-EnhancedLog -Message "Re-enabling lock screen" -Level "INFO"
-      Set-RegistryValue -RegKeyPath "HKLM:\Software\Policies\Microsoft\Windows\Personalization" -RegValName "NoLockScreen" -RegValType "DWORD" -RegValData "0"
-
-      # Enumerate local user accounts and disable them
-      $Users = Get-LocalUser | Where-Object { $_.Enabled -eq $true -and $_.Name -notlike 'default*' }
-      foreach ($User in $Users) {
-        Write-EnhancedLog -Message "Disabling local user account $User" -Level "INFO"
-        Disable-LocalUser -Name $User.Name
+      catch {
+          Write-EnhancedLog -Message "An error occurred in PostRunOnce3 function: $($_.Exception.Message)" -Level "ERROR"
+          Handle-Error -ErrorRecord $_
       }
-
-      # Delete scheduled tasks created for migration
-      $taskPath = "AAD Migration"
-      $tasks = Get-ScheduledTask -TaskPath "\$taskPath\"
-      foreach ($Task in $tasks) {
-        Unregister-ScheduledTask -TaskName $Task.TaskName -Confirm:$false
-      }
-      $scheduler = New-Object -ComObject "Schedule.Service"
-      $scheduler.Connect()
-      $rootFolder = $scheduler.GetFolder("\")
-      $rootFolder.DeleteFolder($taskPath, $null)
-
-      # Delete migration files, leave log folder
-      # Remove PPKG files, which include nested credentials
-      $FileName = "C:\ProgramData\AADMigration\Files"
-      if (Test-Path -Path $FileName) {
-        Remove-Item -Path $FileName -Recurse -Force
-      }
-
-      $FileName = "C:\ProgramData\AADMigration\Scripts"
-      if (Test-Path -Path $FileName) {
-        Remove-Item -Path $FileName -Recurse -Force
-      }
-
-      $FileName = "C:\ProgramData\AADMigration\Toolkit"
-      if (Test-Path -Path $FileName) {
-        Remove-Item -Path $FileName -Recurse -Force
-      }
-
-      # Launch OneDrive
-      # Start-Process -FilePath "C:\Program Files (x86)\Microsoft OneDrive\OneDrive.exe"
-
-      Stop-Transcript
-    }
-    catch {
-      Write-EnhancedLog -Message "An error occurred in PostRunOnce3: $($_.Exception.Message)" -Level "ERROR"
-      Handle-Error -ErrorRecord $_
-    }
   }
 
   End {
-    Write-EnhancedLog -Message "Exiting PostRunOnce3 function" -Level "INFO"
+      Write-EnhancedLog -Message "Exiting PostRunOnce3 function" -Level "Notice"
   }
 }
 
 # Example usage
-# PostRunOnce3
+# $PostRunOnce3params = @{
+#   TempUser = "TempUser"
+#   RegistrySettings = @{
+#       "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" = @{
+#           "dontdisplaylastusername" = @{
+#               "Type" = "DWORD"
+#               "Data" = "0"
+#           }
+#           "legalnoticecaption" = @{
+#               "Type" = "String"
+#               "Data" = $null
+#           }
+#           "legalnoticetext" = @{
+#               "Type" = "String"
+#               "Data" = $null
+#           }
+#       }
+#       "HKLM:\Software\Policies\Microsoft\Windows\Personalization" = @{
+#           "NoLockScreen" = @{
+#               "Type" = "DWORD"
+#               "Data" = "0"
+#           }
+#       }
+#   }
+#   MigrationDirectories = @(
+#       "C:\ProgramData\AADMigration\Files",
+#       "C:\ProgramData\AADMigration\Scripts",
+#       "C:\ProgramData\AADMigration\Toolkit"
+#   )
+# }
+# PostRunOnce3 @PostRunOnce3params

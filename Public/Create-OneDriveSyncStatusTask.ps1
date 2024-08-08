@@ -24,7 +24,7 @@ function Create-OneDriveSyncStatusTask {
     )
 
     Begin {
-        Write-EnhancedLog -Message "Starting Create-OneDriveSyncStatusTask function" -Level "INFO"
+        Write-EnhancedLog -Message "Starting Create-OneDriveSyncStatusTask function" -Level "Notice"
         Log-Params -Params @{
             TaskPath               = $TaskPath
             TaskName               = $TaskName
@@ -80,7 +80,7 @@ function Create-OneDriveSyncStatusTask {
     }
 
     End {
-        Write-EnhancedLog -Message "Exiting Create-OneDriveSyncStatusTask function" -Level "INFO"
+        Write-EnhancedLog -Message "Exiting Create-OneDriveSyncStatusTask function" -Level "Notice"
     }
 }
 

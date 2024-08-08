@@ -1,13 +1,13 @@
-function Backup-DownloadsToOneDrive {
+function Backup-OutlookSignaturesToOneDrive {
     <#
     .SYNOPSIS
-    Backs up the Downloads folder to OneDrive.
+    Backs up the Outlook Signatures folder to OneDrive.
 
     .DESCRIPTION
-    This function copies all files from the Downloads folder to a specified OneDrive backup directory using Robocopy. It verifies the existence of the OneDrive directory and uses logging for the backup process.
+    This function copies all files from the Outlook Signatures folder to a specified OneDrive backup directory using Robocopy. It verifies the existence of the OneDrive directory and uses logging for the backup process.
 
-    .PARAMETER DownloadsPath
-    The path to the Downloads folder.
+    .PARAMETER SignaturePath
+    The path to the Outlook Signatures folder.
 
     .PARAMETER BackupFolderName
     The name of the backup folder within OneDrive.
@@ -26,20 +26,20 @@ function Backup-DownloadsToOneDrive {
 
     .EXAMPLE
     $params = @{
-        DownloadsPath = "$env:USERPROFILE\Downloads"
-        BackupFolderName = "DownloadsBackup"
+        SignaturePath = "$env:USERPROFILE\AppData\Roaming\Microsoft\Signatures"
+        BackupFolderName = "OutlookSignatures"
         Exclude = ".git"
         RetryCount = 2
         WaitTime = 5
         RequiredSpaceGB = 10
     }
-    Backup-DownloadsToOneDrive @params
+    Backup-OutlookSignaturesToOneDrive @params
     #>
 
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [string]$DownloadsPath,
+        [string]$SignaturePath,
 
         [Parameter(Mandatory = $true)]
         [string]$BackupFolderName,
@@ -58,7 +58,7 @@ function Backup-DownloadsToOneDrive {
     )
 
     Begin {
-        Write-EnhancedLog -Message "Starting Backup-DownloadsToOneDrive function" -Level "Notice"
+        Write-EnhancedLog -Message "Starting Backup-OutlookSignaturesToOneDrive function" -Level "Notice"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
@@ -71,11 +71,12 @@ function Backup-DownloadsToOneDrive {
             }
             Write-EnhancedLog -Message "OneDrive directory found: $oneDriveDirectory" -Level "INFO"
 
-            # Check if the Downloads directory exists
-            if (-not (Test-Path -Path $DownloadsPath)) {
-                Throw "Downloads directory not found. Please ensure the path is correct."
+            # Check if the Outlook Signatures directory exists
+            if (-not (Test-Path -Path $SignaturePath)) {
+                Write-EnhancedLog -Message "Outlook Signatures directory not found. It seems Outlook is not set up." -Level "Warning"
+                return
             }
-            Write-EnhancedLog -Message "Downloads directory found: $DownloadsPath" -Level "INFO"
+            Write-EnhancedLog -Message "Outlook Signatures directory found: $SignaturePath" -Level "INFO"
 
             # Define the destination path within the OneDrive directory
             $backupPath = Join-Path -Path $oneDriveDirectory -ChildPath $BackupFolderName
@@ -88,7 +89,7 @@ function Backup-DownloadsToOneDrive {
 
             # Use splatting for function parameters
             $params = @{
-                Source          = $DownloadsPath
+                Source          = $SignaturePath
                 Destination     = $backupPath
                 FilePattern     = '*'
                 Exclude         = $Exclude
@@ -100,26 +101,26 @@ function Backup-DownloadsToOneDrive {
             # Execute the function with splatting
             Copy-FilesWithRobocopy @params
 
-            Write-EnhancedLog -Message "Backup of Downloads to OneDrive completed successfully." -Level "INFO"
+            Write-EnhancedLog -Message "Backup of Outlook Signatures to OneDrive completed successfully." -Level "INFO"
         }
         catch {
-            Write-EnhancedLog -Message "An error occurred in Backup-DownloadsToOneDrive function: $($_.Exception.Message)" -Level "ERROR"
+            Write-EnhancedLog -Message "An error occurred in Backup-OutlookSignaturesToOneDrive function: $($_.Exception.Message)" -Level "ERROR"
             Handle-Error -ErrorRecord $_
         }
     }
 
     End {
-        Write-EnhancedLog -Message "Exiting Backup-DownloadsToOneDrive function" -Level "Notice"
+        Write-EnhancedLog -Message "Exiting Backup-OutlookSignaturesToOneDrive function" -Level "Notice"
     }
 }
 
-# Example usage
+# # Example usage
 # $params = @{
-#     DownloadsPath = "$env:USERPROFILE\Downloads"
-#     BackupFolderName = "DownloadsBackup"
+#     SignaturePath = "$env:USERPROFILE\AppData\Roaming\Microsoft\Signatures"
+#     BackupFolderName = "OutlookSignatures"
 #     Exclude = ".git"
 #     RetryCount = 2
 #     WaitTime = 5
 #     RequiredSpaceGB = 10
 # }
-# Backup-DownloadsToOneDrive @params
+# Backup-OutlookSignaturesToOneDrive @params

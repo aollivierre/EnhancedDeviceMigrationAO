@@ -21,7 +21,7 @@ function Main-MigrateToAADJOnly {
     )
 
     Begin {
-        Write-EnhancedLog -Message "Starting Main-MigrateToAADJOnly function" -Level "INFO"
+        Write-EnhancedLog -Message "Starting Main-MigrateToAADJOnly function" -Level "Notice"
         Log-Params -Params @{
             PPKGName            = $PPKGName;
             DomainLeaveUser     = $DomainLeaveUser;
@@ -103,7 +103,6 @@ function Main-MigrateToAADJOnly {
             }
 
             Set-RunOnce @SetRunOnceParams
-
         }
         Add-Step -description "Suspending BitLocker With Reboot Count" -action {
 
@@ -125,16 +124,16 @@ function Main-MigrateToAADJOnly {
             # Remove-CompanyPortal @RemoveCompanyPortalParams
 
             $RemoveIntuneMgmtParams = @{
-                OMADMPath              = "HKLM:\SOFTWARE\Microsoft\Provisioning\OMADM\Accounts\*"
-                EnrollmentBasePath     = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Enrollments"
-                TrackedBasePath        = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\EnterpriseResourceManager\Tracked"
-                PolicyManagerBasePath  = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\PolicyManager"
-                ProvisioningBasePath   = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Provisioning"
-                CertCurrentUserPath    = "cert:\CurrentUser"
-                CertLocalMachinePath   = "cert:\LocalMachine"
-                TaskPathBase           = "\Microsoft\Windows\EnterpriseMgmt"
-                MSDMProviderID         = "MS DM Server"
-                RegistryPathsToRemove  = @(
+                OMADMPath             = "HKLM:\SOFTWARE\Microsoft\Provisioning\OMADM\Accounts\*"
+                EnrollmentBasePath    = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Enrollments"
+                TrackedBasePath       = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\EnterpriseResourceManager\Tracked"
+                PolicyManagerBasePath = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\PolicyManager"
+                ProvisioningBasePath  = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Provisioning"
+                CertCurrentUserPath   = "cert:\CurrentUser"
+                CertLocalMachinePath  = "cert:\LocalMachine"
+                TaskPathBase          = "\Microsoft\Windows\EnterpriseMgmt"
+                MSDMProviderID        = "MS DM Server"
+                RegistryPathsToRemove = @(
                     "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Enrollments",
                     "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Enrollments\Status",
                     "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\EnterpriseResourceManager\Tracked",
@@ -144,8 +143,8 @@ function Main-MigrateToAADJOnly {
                     "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Provisioning\OMADM\Logger",
                     "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Provisioning\OMADM\Sessions"
                 )
-                UserCertIssuer         = "CN=SC_Online_Issuing"
-                DeviceCertIssuers      = @("CN=Microsoft Intune Root Certification Authority", "CN=Microsoft Intune MDM Device CA")
+                UserCertIssuer        = "CN=SC_Online_Issuing"
+                DeviceCertIssuers     = @("CN=Microsoft Intune Root Certification Authority", "CN=Microsoft Intune MDM Device CA")
             }
 
             Remove-IntuneMgmt @RemoveIntuneMgmtParams
@@ -158,13 +157,14 @@ function Main-MigrateToAADJOnly {
             $RemoveADJoinParams = @{
                 # DomainLeaveUser     = $DomainLeaveUser
                 # DomainLeavePassword = $DomainLeavePassword
-                TempUser            = $TempUser
-                TempUserPassword    = $TempUserPassword
-                ComputerName        = "localhost"
-                TaskName            = "AADM Launch PSADT for Interactive Migration"
+                TempUser         = $TempUser
+                TempUserPassword = $TempUserPassword
+                ComputerName     = "localhost"
+                TaskName         = "AADM Launch PSADT for Interactive Migration"
             }
             
             Remove-ADJoin @RemoveADJoinParams
+
 
         }
     }
@@ -182,7 +182,7 @@ function Main-MigrateToAADJOnly {
     }
 
     End {
-        Write-EnhancedLog -Message "Exiting Main-MigrateToAADJOnly function" -Level "INFO"
+        Write-EnhancedLog -Message "Exiting Main-MigrateToAADJOnly function" -Level "Notice"
     }
 }
 

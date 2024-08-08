@@ -1,158 +1,195 @@
+
 function PostRunOnce2 {
+    <#
+    .SYNOPSIS
+    Executes post-run operations for the second phase of the migration process.
+
+    .DESCRIPTION
+    The PostRunOnce2 function blocks user input, displays a migration in progress form, creates a scheduled task for post-migration cleanup, escrows the BitLocker recovery key, sets various registry values, and restarts the computer.
+
+    .PARAMETER ImagePath
+    The path to the image file to be displayed on the migration progress form.
+
+    .PARAMETER TaskPath
+    The path of the task in Task Scheduler.
+
+    .PARAMETER TaskName
+    The name of the scheduled task.
+
+    .PARAMETER ScriptPath
+    The path to the PowerShell script to be executed by the scheduled task.
+
+    .PARAMETER BitlockerDrives
+    An array of drive letters for the BitLocker protected drives.
+
+    .PARAMETER RegistrySettings
+    A hashtable of registry settings to be applied.
+
+    .EXAMPLE
+    $params = @{
+        ImagePath = "C:\ProgramData\AADMigration\Files\MigrationInProgress.bmp"
+        TaskPath = "AAD Migration"
+        TaskName = "Run Post-migration cleanup"
+        ScriptPath = "C:\ProgramData\AADMigration\Scripts\PostRunOnce3.ps1"
+        BitlockerDrives = @("C:", "D:")
+        RegistrySettings = @{
+            "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" = @{
+                "AutoAdminLogon" = @{
+                    "Type" = "DWORD"
+                    "Data" = "0"
+                }
+            }
+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" = @{
+                "dontdisplaylastusername" = @{
+                    "Type" = "DWORD"
+                    "Data" = "1"
+                }
+                "legalnoticecaption" = @{
+                    "Type" = "String"
+                    "Data" = "Migration Completed"
+                }
+                "legalnoticetext" = @{
+                    "Type" = "String"
+                    "Data" = "This PC has been migrated to Azure Active Directory. Please log in to Windows using your email address and password."
+                }
+            }
+        }
+    }
+    PostRunOnce2 @params
+    Executes the post-run operations.
+    #>
+
     [CmdletBinding()]
-    param ()
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$ImagePath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$TaskPath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$TaskName,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ScriptPath,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$BitlockerDrives,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$RegistrySettings
+    )
 
     Begin {
-        Write-EnhancedLog -Message "Starting PostRunOnce2 function" -Level "INFO"
+        Write-EnhancedLog -Message "Starting PostRunOnce2 function" -Level "Notice"
+        Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
     Process {
         try {
-            # Start-Transcript -Path C:\ProgramData\AADMigration\Logs\AD2AADJ-R2.txt -Append -Verbose
+            # Start-Transcript -Path "C:\ProgramData\AADMigration\Logs\AD2AADJ-R2.txt" -Append -Verbose
 
             # Block user input
-            $code = @"
-                [DllImport("user32.dll")]
-                public static extern bool BlockInput(bool fBlockIt);
-"@
-            $userInput = Add-Type -MemberDefinition $code -Name Blocker -Namespace UserInput -PassThru
-            $null = $userInput::BlockInput($true)
+            $blockParams = @{
+                Block = $true
+            }
+            Block-UserInput @blockParams
 
-            # Display form with user input block message
-            [void][reflection.assembly]::LoadWithPartialName("System.Drawing")
-            [void][reflection.assembly]::LoadWithPartialName("System.Windows.Forms")
-            $file = Get-Item "C:\ProgramData\AADMigration\Files\MigrationInProgress.bmp"
-            $img = [System.Drawing.Image]::FromFile((Get-Item $file))
+            # Show migration in progress form
+            $formParams = @{
+                ImagePath = $ImagePath
+            }
+            Show-MigrationInProgressForm @formParams
 
-            [System.Windows.Forms.Application]::EnableVisualStyles()
-            $form = New-Object Windows.Forms.Form
-            $form.Text = "Migration in Progress"
-            $form.WindowState = 'Maximized'
-            $form.BackColor = "#000000"
-            $form.TopMost = $true
+            # Create scheduled task for post-migration cleanup
+            $taskParams = @{
+                TaskPath   = $TaskPath
+                TaskName   = $TaskName
+                ScriptPath = $ScriptPath
+            }
+            Create-ScheduledTask @taskParams
 
-            $pictureBox = New-Object Windows.Forms.PictureBox
-            $pictureBox.Width = $img.Size.Width
-            $pictureBox.Height = $img.Size.Height
-            $pictureBox.Dock = "Fill"
-            $pictureBox.SizeMode = "StretchImage"
-            $pictureBox.Image = $img
-            $form.Controls.Add($pictureBox)
-            $form.Add_Shown({ $form.Activate() })
-            $form.Show()
+            # $schedulerconfigPath = Join-Path -Path $PSScriptRoot -ChildPath "config.psd1"
+            # $taskParams = @{
+            #     ConfigPath = $schedulerconfigPath
+            #     FileName   = "run-ps-hidden.vbs"
+            #     Scriptroot = $PSScriptRoot
+            # }
 
-            # Function to set registry values
-            function Set-RegistryValue {
-                [CmdletBinding()]
-                param (
-                    [string]$RegKeyPath,
-                    [string]$RegValName,
-                    [string]$RegValType,
-                    [string]$RegValData
-                )
+            # CreateAndExecuteScheduledTask @taskParams
 
-                # Test to see if Edge key exists, if it does not exist create it
-                $RegKeyPathExists = Test-Path -Path $RegKeyPath
-                if (-not $RegKeyPathExists) {
-                    New-Item -Path $RegKeyPath -Force | Out-Null
+
+            # Escrow BitLocker recovery key for each drive
+            foreach ($drive in $BitlockerDrives) {
+                $escrowParams = @{
+                    DriveLetter = $drive
                 }
+                Escrow-BitLockerKey @escrowParams
+            }
 
-                # Check to see if value exists
-                try {
-                    $CurrentValue = Get-ItemPropertyValue -Path $RegKeyPath -Name $RegValName
-                }
-                catch {
-                    # If value does not exist an error would be thrown, catch error and create key
-                    Set-ItemProperty -Path $RegKeyPath -Name $RegValName -Type $RegValType -Value $RegValData -Force
-                }
-
-                if ($CurrentValue -ne $RegValData) {
-                    # If value exists but data is wrong, update the value
-                    Set-ItemProperty -Path $RegKeyPath -Name $RegValName -Type $RegValType -Value $RegValData -Force
+            # Set registry values
+            foreach ($regPath in $RegistrySettings.Keys) {
+                foreach ($regName in $RegistrySettings[$regPath].Keys) {
+                    $regSetting = $RegistrySettings[$regPath][$regName]
+                    $regParams = @{
+                        RegKeyPath = $regPath
+                        RegValName = $regName
+                        RegValType = $regSetting["Type"]
+                        RegValData = $regSetting["Data"]
+                    }
+                    Set-RegistryValue @regParams
                 }
             }
 
-            Write-EnhancedLog -Message "Creating scheduled task to run PostRunOnce3" -Level "INFO"
-            $TaskPath = "AAD Migration"
-            $TaskName = "Run Post-migration cleanup"
-            $ScriptPath = "C:\ProgramData\AADMigration\Scripts"
-            $ScriptName = "PostRunOnce3.ps1"
-            $arguments = "-executionpolicy Bypass -file $ScriptPath\$ScriptName"
+            # Stop-Transcript
 
-            $action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument $arguments
-            $trigger = New-ScheduledTaskTrigger -AtLogOn
-            $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
-            $Task = Register-ScheduledTask -Principal $principal -Action $action -Trigger $trigger -TaskName $TaskName -Description "Run post AAD Migration cleanup" -TaskPath $TaskPath
-
-            Write-EnhancedLog -Message "Escrowing current Numeric Key" -Level "INFO"
-            function Test-Bitlocker ($BitlockerDrive) {
-                # Tests the drive for existing Bitlocker key protectors
-                try {
-                    Get-BitLockerVolume -MountPoint $BitlockerDrive -ErrorAction Stop
-                }
-                catch {
-                    Write-Output "Bitlocker was not found protecting the $BitlockerDrive drive. Terminating script!"
-                }
-            }
-            function Get-KeyProtectorId ($BitlockerDrive) {
-                # Fetches the key protector ID of the drive
-                $BitLockerVolume = Get-BitLockerVolume -MountPoint $BitlockerDrive
-                $KeyProtector = $BitLockerVolume.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' }
-                return $KeyProtector.KeyProtectorId
-            }
-            function Invoke-BitlockerEscrow ($BitlockerDrive, $BitlockerKey) {
-                # Escrow the key into Azure AD
-                try {
-                    BackupToAAD-BitLockerKeyProtector -MountPoint $BitlockerDrive -KeyProtectorId $BitlockerKey -ErrorAction SilentlyContinue
-                    Write-Output "Attempted to escrow key in Azure AD - Please verify manually!"
-                }
-                catch {
-                    Write-Error "Debug"
-                }
-            }
-
-            $BitlockerVolumes = Get-BitLockerVolume
-            $BitlockerVolumes | ForEach-Object {
-                $MountPoint = $_.MountPoint
-                $RecoveryKey = [string]($_.KeyProtector).RecoveryPassword
-                if ($RecoveryKey.Length -gt 5) {
-                    $DriveLetter = $MountPoint
-                    Write-Output $DriveLetter
-                    Test-Bitlocker -BitlockerDrive $DriveLetter
-                    $KeyProtectorId = Get-KeyProtectorId -BitlockerDrive $DriveLetter
-                    Invoke-BitlockerEscrow -BitlockerDrive $DriveLetter -BitlockerKey $KeyProtectorId
-                }
-            }
-
-            Write-EnhancedLog -Message "Setting registry key to disable AutoAdminLogon" -Level "INFO"
-            Set-RegistryValue -RegKeyPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" -RegValName "AutoAdminLogon" -RegValType "DWORD" -RegValData "0"
-
-            Write-EnhancedLog -Message "Setting key to not show last logged in user" -Level "INFO"
-            Set-RegistryValue -RegKeyPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -RegValName "dontdisplaylastusername" -RegValType "DWORD" -RegValData "1"
-
-            Write-EnhancedLog -Message "Setting legal notice caption" -Level "INFO"
-            Set-RegistryValue -RegKeyPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -RegValName "legalnoticecaption" -RegValType "String" -RegValData "Migration Completed"
-
-            Write-EnhancedLog -Message "Setting legal notice text" -Level "INFO"
-            Set-RegistryValue -RegKeyPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -RegValName "legalnoticetext" -RegValType "String" -RegValData "This PC has been migrated to Azure Active Directory. Please log in to Windows using your email address and password."
-
-            Stop-Transcript
-
-            $null = $userInput::BlockInput($false)
-            $form.Close()
+            # Unblock user input and close form
+            Block-UserInput -Block $false
 
             Restart-Computer
         }
         catch {
-            Write-EnhancedLog -Message "An error occurred in PostRunOnce2: $($_.Exception.Message)" -Level "ERROR"
+            Write-EnhancedLog -Message "An error occurred in PostRunOnce2 function: $($_.Exception.Message)" -Level "ERROR"
             Handle-Error -ErrorRecord $_
         }
     }
 
     End {
-        Write-EnhancedLog -Message "Exiting PostRunOnce2 function" -Level "INFO"
+        Write-EnhancedLog -Message "Exiting PostRunOnce2 function" -Level "Notice"
     }
 }
+
+# Example usage
+# $params = @{
+#     ImagePath = "C:\ProgramData\AADMigration\Files\MigrationInProgress.bmp"
+#     TaskPath = "AAD Migration"
+#     TaskName = "Run Post-migration cleanup"
+#     ScriptPath = "C:\ProgramData\AADMigration\Scripts\PostRunOnce3.ps1"
+#     BitlockerDrives = @("C:", "D:")
+#     RegistrySettings = @{
+#         "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" = @{
+#             "AutoAdminLogon" = @{
+#                 "Type" = "DWORD"
+#                 "Data" = "0"
+#             }
+#         }
+#         "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" = @{
+#             "dontdisplaylastusername" = @{
+#                 "Type" = "DWORD"
+#                 "Data" = "1"
+#             }
+#             "legalnoticecaption" = @{
+#                 "Type" = "String"
+#                 "Data" = "Migration Completed"
+#             }
+#             "legalnoticetext" = @{
+#                 "Type" = "String"
+#                 "Data" = "This PC has been migrated to Azure Active Directory. Please log in to Windows using your email address and password."
+#             }
+#         }
+#     }
+# }
+# PostRunOnce2 @params
 
 # Example usage
 # PostRunOnce2

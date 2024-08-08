@@ -5,16 +5,18 @@ function Check-OneDriveSyncStatus {
     )
 
     Begin {
-        Write-EnhancedLog -Message "Starting Check-OneDriveSyncStatus function" -Level "INFO"
+        Write-EnhancedLog -Message "Starting Check-OneDriveSyncStatus function" -Level "Notice"
         Log-Params -Params @{ OneDriveLibPath = $OneDriveLibPath }
 
         # Check if running elevated
-        $isElevated = (New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        # $isElevated = (New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
-        if ($isElevated) {
-            Write-EnhancedLog -Message "Session is running elevated. Skipping Check-OneDriveSyncStatus function." -Level "INFO"
-            return
-        }
+        # if ($isElevated) {
+        #     Write-EnhancedLog -Message "Session is running elevated. Skipping Check-OneDriveSyncStatus function." -Level "INFO"
+        #     return
+        # }
+
+        # CheckAndElevate
 
         # Import OneDriveLib.dll to check current OneDrive Sync Status
         Import-Module $OneDriveLibPath
@@ -69,9 +71,12 @@ function Check-OneDriveSyncStatus {
     }
 
     End {
-        Write-EnhancedLog -Message "Exiting Check-OneDriveSyncStatus function" -Level "INFO"
+        Write-EnhancedLog -Message "Exiting Check-OneDriveSyncStatus function" -Level "Notice"
     }
 }
 
 # Example usage
-# Check-OneDriveSyncStatus -OneDriveLibPath "C:\ProgramData\AADMigration\Files\OneDriveLib.dll"
+# $params = @{
+#     OneDriveLibPath = "C:\ProgramData\AADMigration\Files\OneDriveLib.dll"
+# }
+# Check-OneDriveSyncStatus @params
