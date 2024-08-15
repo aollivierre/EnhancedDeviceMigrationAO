@@ -35,12 +35,12 @@ function Trigger-OneDriveSyncStatusTask {
     }
 }
 
-# Example usage
-# Define parameters using a hashtable
-$taskParams = @{
-    TaskPath = "\AAD Migration"
-    TaskName = "AADM Get OneDrive Sync Status"
-}
+# # Example usage
+# # Define parameters using a hashtable
+# $taskParams = @{
+#     TaskPath = "\AAD Migration"
+#     TaskName = "AADM Get OneDrive Sync Status"
+# }
 
-# Call the function with splatting
-Trigger-OneDriveSyncStatusTask @taskParams
+# # Call the function with splatting
+# Trigger-OneDriveSyncStatusTask @taskParams
