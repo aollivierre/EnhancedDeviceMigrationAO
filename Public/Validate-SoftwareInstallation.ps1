@@ -102,23 +102,23 @@ function Validate-SoftwareInstallation {
 
 
 
-# Parameters for validating OneDrive installation
-$oneDriveValidationParams = @{
-    SoftwareName         = "OneDrive"
-    MinVersion           = [version]"24.146.0721.0003"  # Example minimum version
-    RegistryPath         = "HKLM:\SOFTWARE\Microsoft\OneDrive"  # Example registry path for OneDrive metadata
-    ExePath              = "C:\Program Files\Microsoft OneDrive\OneDrive.exe"  # Path to the OneDrive executable
-    MaxRetries           = 3
-    DelayBetweenRetries  = 5
-}
+# # Parameters for validating OneDrive installation
+# $oneDriveValidationParams = @{
+#     SoftwareName         = "OneDrive"
+#     MinVersion           = [version]"24.146.0721.0003"  # Example minimum version
+#     RegistryPath         = "HKLM:\SOFTWARE\Microsoft\OneDrive"  # Example registry path for OneDrive metadata
+#     ExePath              = "C:\Program Files\Microsoft OneDrive\OneDrive.exe"  # Path to the OneDrive executable
+#     MaxRetries           = 3
+#     DelayBetweenRetries  = 5
+# }
 
-# Perform the validation
-$oneDriveValidationResult = Validate-SoftwareInstallation @oneDriveValidationParams
+# # Perform the validation
+# $oneDriveValidationResult = Validate-SoftwareInstallation @oneDriveValidationParams
 
-# Check the results of the validation
-if ($oneDriveValidationResult.IsInstalled) {
-    Write-Host "OneDrive version $($oneDriveValidationResult.Version) is installed and validated." -ForegroundColor Green
-    Write-Host "Executable Path: $($oneDriveValidationResult.Path)"
-} else {
-    Write-Host "OneDrive is not installed or does not meet the minimum version requirement." -ForegroundColor Red
-}
+# # Check the results of the validation
+# if ($oneDriveValidationResult.IsInstalled) {
+#     Write-Host "OneDrive version $($oneDriveValidationResult.Version) is installed and validated." -ForegroundColor Green
+#     Write-Host "Executable Path: $($oneDriveValidationResult.Path)"
+# } else {
+#     Write-Host "OneDrive is not installed or does not meet the minimum version requirement." -ForegroundColor Red
+# }
