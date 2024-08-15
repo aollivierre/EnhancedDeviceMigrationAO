@@ -220,20 +220,23 @@ function Prepare-AADMigration {
                 
 
                 # Example usage
-                $InstallOneDriveParams = @{
+                $installParams = @{
                     MigrationPath            = "C:\ProgramData\AADMigration"
-                    OneDriveKFM              = $true
-                    ODSetupUri               = "https://go.microsoft.com/fwlink/?linkid=844652"
-                    ODSetupFile              = "Files\OneDriveSetup.exe"
-                    ODRegKey                 = "HKLM:\SOFTWARE\Microsoft\OneDrive"
-                    OneDriveExePath          = "C:\Program Files\Microsoft OneDrive\OneDrive.exe"
+                    SoftwareName             = "OneDrive"
+                    SetupUri                 = "https://go.microsoft.com/fwlink/?linkid=844652"
+                    SetupFile                = "OneDriveSetup.exe"
+                    RegKey                   = "HKLM:\SOFTWARE\Microsoft\OneDrive"
+                    MinVersion               = [version]"24.146.0721.0003"
+                    ExePath                  = "C:\Program Files\Microsoft OneDrive\OneDrive.exe"
                     ScheduledTaskName        = "OneDriveRemediation"
                     ScheduledTaskDescription = "Restart OneDrive to kick off KFM sync"
-                    # ScheduledTaskArgumentList = ""
                     SetupArgumentList        = "/allusers"
+                    KFM                      = $true
+                    TimestampPrefix          = "OneDriveSetup_"
                 }
+                
+                Install-Software @installParams
 
-                Install-OneDrive @InstallOneDriveParams
 
                 $DBG
 

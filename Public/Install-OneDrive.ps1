@@ -1,4 +1,27 @@
+# Function to download OneDrive setup with retry logic
 function Download-OneDriveSetup {
+    <#
+    .SYNOPSIS
+        Downloads the OneDrive setup executable.
+
+    .DESCRIPTION
+        Downloads the OneDrive setup executable from the specified URL to the given destination path.
+        Uses the Start-FileDownloadWithRetry function for robust download handling with retries.
+
+    .PARAMETER ODSetupUri
+        The URL of the OneDrive setup executable.
+
+    .PARAMETER ODSetupPath
+        The file path where the OneDrive setup executable will be saved.
+
+    .EXAMPLE
+        Download-OneDriveSetup -ODSetupUri "https://go.microsoft.com/fwlink/?linkid=844652" -ODSetupPath "C:\Temp\OneDriveSetup.exe"
+
+    .NOTES
+        Author: Abdullah Ollivierre
+        Date: 2024-08-15
+    #>
+
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
@@ -9,255 +32,209 @@ function Download-OneDriveSetup {
     )
 
     Begin {
-        Write-EnhancedLog -Message "Starting Download-OneDriveSetup function" -Level "Notice"
+        Write-EnhancedLog -Message "Starting Download-OneDriveSetup function" -Level "NOTICE"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
     Process {
-        try {
-            Invoke-WebRequest -Uri $ODSetupUri -OutFile $ODSetupPath
-            Write-EnhancedLog -Message "Downloaded OneDrive setup to $ODSetupPath" -Level "INFO"
-        }
-        catch {
-            Write-EnhancedLog -Message "An error occurred while downloading OneDrive setup: $($_.Exception.Message)" -Level "ERROR"
-            Handle-Error -ErrorRecord $_
-            throw $_
-        }
+        Write-EnhancedLog -Message "Starting Start-FileDownloadWithRetry function" -Level "NOTICE"
+        Start-FileDownloadWithRetry -Source $ODSetupUri -Destination $ODSetupPath -MaxRetries 3
+        Write-EnhancedLog -Message "Downloaded OneDrive setup to $ODSetupPath" -Level "INFO"
     }
 
     End {
-        Write-EnhancedLog -Message "Exiting Download-OneDriveSetup function" -Level "Notice"
+        Write-EnhancedLog -Message "Exiting Download-OneDriveSetup function" -Level "NOTICE"
     }
 }
-
-function Get-OneDriveSetupVersion {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$ODSetupPath
-    )
-
-    Begin {
-        Write-EnhancedLog -Message "Starting Get-OneDriveSetupVersion function" -Level "Notice"
-        Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
-    }
-
-    Process {
-        try {
-            $ODSetupVersion = (Get-ChildItem -Path $ODSetupPath).VersionInfo.FileVersion
-            Write-EnhancedLog -Message "OneDrive setup version: $ODSetupVersion" -Level "INFO"
-            return $ODSetupVersion
-        }
-        catch {
-            Write-EnhancedLog -Message "An error occurred while getting OneDrive setup version: $($_.Exception.Message)" -Level "ERROR"
-            Handle-Error -ErrorRecord $_
-            throw $_
-        }
-    }
-
-    End {
-        Write-EnhancedLog -Message "Exiting Get-OneDriveSetupVersion function" -Level "Notice"
-    }
-}
-
-
-function Get-InstalledOneDriveVersion {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$ODRegKey
-    )
-
-    Begin {
-        Write-EnhancedLog -Message "Starting Get-InstalledOneDriveVersion function" -Level "Notice"
-        Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
-    }
-
-    Process {
-        try {
-            $InstalledVer = if (Test-Path -Path $ODRegKey) {
-                Get-ItemPropertyValue -Path $ODRegKey -Name Version
-            } else {
-                [System.Version]::new("0.0.0.0")
-            }
-            Write-EnhancedLog -Message "Installed OneDrive version: $InstalledVer" -Level "INFO"
-            return $InstalledVer
-        }
-        catch {
-            Write-EnhancedLog -Message "An error occurred while getting installed OneDrive version: $($_.Exception.Message)" -Level "ERROR"
-            Handle-Error -ErrorRecord $_
-            throw $_
-        }
-    }
-
-    End {
-        Write-EnhancedLog -Message "Exiting Get-InstalledOneDriveVersion function" -Level "Notice"
-    }
-}
-
-
+# Function to install OneDrive
 function Install-OneDriveSetup {
-    [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)]
         [string]$ODSetupPath,
-
-        [Parameter(Mandatory = $true)]
         [string]$SetupArgumentList
     )
-
-    Begin {
-        Write-EnhancedLog -Message "Starting Install-OneDriveSetup function" -Level "Notice"
-        Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
+    
+    Write-Log "Installing OneDrive setup from $ODSetupPath..." -Level "INFO"
+    $startProcessParams = @{
+        FilePath     = $ODSetupPath
+        ArgumentList = $SetupArgumentList
+        Wait         = $true
+        NoNewWindow  = $true
     }
-
-    Process {
-        try {
-            Write-EnhancedLog -Message "Installing OneDrive setup" -Level "INFO"
-            Start-Process -FilePath $ODSetupPath -ArgumentList $SetupArgumentList -Wait -NoNewWindow
-        }
-        catch {
-            Write-EnhancedLog -Message "An error occurred while installing OneDrive setup: $($_.Exception.Message)" -Level "ERROR"
-            Handle-Error -ErrorRecord $_
-            throw $_
-        }
+    
+    try {
+        Start-Process @startProcessParams
+        Write-Log "OneDrive installation completed." -Level "INFO"
     }
-
-    End {
-        Write-EnhancedLog -Message "Exiting Install-OneDriveSetup function" -Level "Notice"
+    catch {
+        Write-Log "An error occurred during OneDrive installation: $($_.Exception.Message)" -Level "ERROR"
+        throw $_
     }
 }
 
+# Main function to manage the entire OneDrive installation and configuration
+function Install-Software {
+    <#
+    .SYNOPSIS
+        Installs a specified software and performs pre- and post-installation validation.
 
-function Perform-KFMSync {
+    .DESCRIPTION
+        This function handles the installation of software by downloading the installer, validating the software before and after installation, 
+        and performing any necessary post-installation tasks such as syncing or configuring the software.
+
+    .PARAMETER MigrationPath
+        The base directory path where the setup file will be stored.
+
+    .PARAMETER SoftwareName
+        The name of the software to be installed, used for validation.
+
+    .PARAMETER SetupUri
+        The URL from which the setup executable will be downloaded.
+
+    .PARAMETER SetupFile
+        The name of the setup executable file.
+
+    .PARAMETER RegKey
+        The registry key path used for validating the installed version.
+
+    .PARAMETER MinVersion
+        The minimum required version of the software to validate the installation.
+
+    .PARAMETER ExePath
+        The path to the executable file used for file-based validation.
+
+    .PARAMETER ScheduledTaskName
+        The name of the scheduled task used for any post-installation tasks.
+
+    .PARAMETER ScheduledTaskDescription
+        A description for the scheduled task.
+
+    .PARAMETER SetupArgumentList
+        The arguments passed to the installer executable during installation.
+
+    .PARAMETER KFM
+        Specifies whether to perform a Known Folder Move (KFM) sync after installation. Default is $false.
+
+    .PARAMETER TimestampPrefix
+        A prefix used for naming the timestamped folder in the TEMP directory. Default is 'Setup_'.
+
+    .EXAMPLE
+        $installParams = @{
+            MigrationPath           = "C:\Migration"
+            SoftwareName            = "OneDrive"
+            SetupUri                = "https://go.microsoft.com/fwlink/?linkid=844652"
+            SetupFile               = "OneDriveSetup.exe"
+            RegKey                  = "HKLM:\SOFTWARE\Microsoft\OneDrive"
+            MinVersion              = [version]"23.143.0712.0001"
+            ExePath                 = "C:\Program Files\Microsoft OneDrive\OneDrive.exe"
+            ScheduledTaskName       = "OneDriveRemediation"
+            ScheduledTaskDescription= "Restart OneDrive to kick off KFM sync"
+            SetupArgumentList       = "/allusers"
+            KFM                     = $true
+            TimestampPrefix         = "OneDriveSetup_"
+        }
+        Install-Software @installParams
+
+    .NOTES
+        Author: Abdullah Ollivierre
+        Date: 2024-08-15
+    #>
+
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)]
-        [string]$OneDriveExePath,
-
-        [Parameter(Mandatory = $true)]
-        [string]$ScheduledTaskName,
-
-        [Parameter(Mandatory = $true)]
-        [string]$ScheduledTaskDescription
-    )
-
-    Begin {
-        Write-EnhancedLog -Message "Starting Perform-KFMSync function" -Level "Notice"
-        Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
-    }
-
-    Process {
-        try {
-            Write-EnhancedLog -Message "Performing KFM sync" -Level "INFO"
-            $ODProcess = Get-Process -Name OneDrive -ErrorAction SilentlyContinue
-
-            if ($ODProcess) {
-                $ODProcess | Stop-Process -Confirm:$false -Force
-                Start-Sleep -Seconds 5
-
-                Unregister-ScheduledTaskWithLogging -TaskName $ScheduledTaskName
-
-                $CreateOneDriveRemediationTaskParams = @{
-                    OneDriveExePath           = $OneDriveExePath
-                    ScheduledTaskName         = $ScheduledTaskName
-                    ScheduledTaskDescription  = $ScheduledTaskDescription
-                }
-                
-                Create-OneDriveRemediationTask @CreateOneDriveRemediationTaskParams
-            }
-        }
-        catch {
-            Write-EnhancedLog -Message "An error occurred while performing KFM sync: $($_.Exception.Message)" -Level "ERROR"
-            Handle-Error -ErrorRecord $_
-            throw $_
-        }
-    }
-
-    End {
-        Write-EnhancedLog -Message "Exiting Perform-KFMSync function" -Level "Notice"
-    }
-}
-
-
-function Install-OneDrive {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory = $true)]
         [string]$MigrationPath,
-
-        [Parameter(Mandatory = $false)]
-        [bool]$OneDriveKFM = $false,
-
-        [Parameter(Mandatory = $true)]
-        [string]$ODSetupUri,
-
-        [Parameter(Mandatory = $true)]
-        [string]$ODSetupFile,
-
-        [Parameter(Mandatory = $true)]
-        [string]$ODRegKey,
-
-        [Parameter(Mandatory = $true)]
-        [string]$OneDriveExePath,
-
-        [Parameter(Mandatory = $true)]
+        [string]$SoftwareName,
+        [string]$SetupUri,
+        [string]$SetupFile,
+        [string]$RegKey,
+        [version]$MinVersion,
+        [string]$ExePath,
         [string]$ScheduledTaskName,
-
-        [Parameter(Mandatory = $true)]
         [string]$ScheduledTaskDescription,
-
-        [Parameter(Mandatory = $true)]
-        [string]$SetupArgumentList
+        [string]$SetupArgumentList,
+        [bool]$KFM = $false,
+        [string]$TimestampPrefix # Default prefix for the timestamped folder
     )
 
     Begin {
-        Write-EnhancedLog -Message "Starting Install-OneDrive function" -Level "Notice"
+        Write-EnhancedLog -Message "Starting Install-Software function for $SoftwareName" -Level "NOTICE"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
 
-        $ODSetupPath = Join-Path -Path $MigrationPath -ChildPath $ODSetupFile
-        $ODSetupVersion = $null
+        # Ensure the script is running with elevated privileges
+        CheckAndElevate
+
+        # Generate a timestamped folder within the TEMP directory
+        $timestamp = (Get-Date).ToString("yyyyMMdd_HHmmss")
+        $destinationFolder = [System.IO.Path]::Combine($env:TEMP, "$TimestampPrefix$timestamp")
+        $SetupPath = [System.IO.Path]::Combine($destinationFolder, $SetupFile)
     }
 
     Process {
-        try {
-            if (-not (Test-Path -Path $ODSetupPath)) {
-                Download-OneDriveSetup -ODSetupUri $ODSetupUri -ODSetupPath $ODSetupPath
-            }
-
-            $ODSetupVersion = Get-OneDriveSetupVersion -ODSetupPath $ODSetupPath
-            $InstalledVer = Get-InstalledOneDriveVersion -ODRegKey $ODRegKey
-
-            if (-not $InstalledVer -or ([System.Version]$InstalledVer -lt [System.Version]$ODSetupVersion)) {
-                Install-OneDriveSetup -ODSetupPath $ODSetupPath -SetupArgumentList $SetupArgumentList
-            } elseif ($OneDriveKFM) {
-                Perform-KFMSync -OneDriveExePath $OneDriveExePath -ScheduledTaskName $ScheduledTaskName -ScheduledTaskDescription $ScheduledTaskDescription
-            }
+        # Step 1: Pre-installation validation
+        Write-EnhancedLog -Message "Step 1: Performing pre-installation validation for $SoftwareName..." -Level "INFO"
+        $preInstallParams = @{
+            SoftwareName        = $SoftwareName
+            MinVersion          = $MinVersion
+            RegistryPath        = $RegKey
+            ExePath             = $ExePath
+            MaxRetries          = 3
+            DelayBetweenRetries = 5
         }
-        catch {
-            Write-EnhancedLog -Message "An error occurred in Install-OneDrive function: $($_.Exception.Message)" -Level "ERROR"
-            Handle-Error -ErrorRecord $_
-            throw $_
+        $preInstallCheck = Validate-SoftwareInstallation @preInstallParams
+        if ($preInstallCheck.IsInstalled) {
+            Write-EnhancedLog -Message "$SoftwareName version $($preInstallCheck.Version) is already installed. Skipping installation." -Level "INFO"
+            return
+        }
+        Write-EnhancedLog -Message "$SoftwareName is not currently installed or needs an update." -Level "INFO"
+
+        # Step 2: Download the setup file if not already present
+        Write-EnhancedLog -Message "Step 2: Downloading $SoftwareName setup..." -Level "INFO"
+        if (-not (Test-Path -Path $SetupPath)) {
+            Download-OneDriveSetup -ODSetupUri $SetupUri -ODSetupPath $SetupPath
+        } else {
+            Write-EnhancedLog -Message "$SoftwareName setup already downloaded at $SetupPath" -Level "INFO"
+        }
+
+        # Step 3: Install the software
+        Write-EnhancedLog -Message "Step 3: Installing $SoftwareName..." -Level "INFO"
+        Install-OneDriveSetup -ODSetupPath $SetupPath -SetupArgumentList $SetupArgumentList
+
+        # Step 4: Post-installation validation
+        Write-EnhancedLog -Message "Step 4: Performing post-installation validation for $SoftwareName..." -Level "INFO"
+        $postInstallCheck = Validate-SoftwareInstallation @preInstallParams
+        if ($postInstallCheck.IsInstalled) {
+            Write-EnhancedLog -Message "$SoftwareName version $($postInstallCheck.Version) installed successfully." -Level "INFO"
+        } else {
+            Write-EnhancedLog -Message "$SoftwareName installation failed." -Level "ERROR"
+            throw "$SoftwareName installation validation failed."
+        }
+
+        # Step 5: Perform KFM sync if enabled
+        if ($KFM) {
+            Write-EnhancedLog -Message "Step 5: Performing KFM sync for $SoftwareName..." -Level "INFO"
+            Perform-KFMSync -OneDriveExePath $ExePath -ScheduledTaskName $ScheduledTaskName -ScheduledTaskDescription $ScheduledTaskDescription
         }
     }
 
     End {
-        Write-EnhancedLog -Message "Exiting Install-OneDrive function" -Level "Notice"
+        Write-EnhancedLog -Message "Exiting Install-Software function for $SoftwareName" -Level "NOTICE"
     }
 }
 
 
-# $InstallOneDriveParams = @{
-#     MigrationPath              = "C:\ProgramData\AADMigration"
-#     OneDriveKFM                = $true
-#     ODSetupUri                 = "https://go.microsoft.com/fwlink/?linkid=844652"
-#     ODSetupFile                = "Files\OneDriveSetup.exe"
-#     ODRegKey                   = "HKLM:\SOFTWARE\Microsoft\OneDrive"
-#     OneDriveExePath            = "C:\Program Files\Microsoft OneDrive\OneDrive.exe"
-#     ScheduledTaskName          = "OneDriveRemediation"
-#     ScheduledTaskDescription   = "Restart OneDrive to kick off KFM sync"
-#     ScheduledTaskArgumentList  = ""
-#     SetupArgumentList          = "/allusers"
+
+# $installParams = @{
+#     MigrationPath            = "C:\ProgramData\AADMigration"
+#     SoftwareName             = "OneDrive"
+#     SetupUri                 = "https://go.microsoft.com/fwlink/?linkid=844652"
+#     SetupFile                = "OneDriveSetup.exe"
+#     RegKey                   = "HKLM:\SOFTWARE\Microsoft\OneDrive"
+#     MinVersion               = [version]"24.146.0721.0003"
+#     ExePath                  = "C:\Program Files\Microsoft OneDrive\OneDrive.exe"
+#     ScheduledTaskName        = "OneDriveRemediation"
+#     ScheduledTaskDescription = "Restart OneDrive to kick off KFM sync"
+#     SetupArgumentList        = "/allusers"
+#     KFM                      = $true
+#     TimestampPrefix          = "OneDriveSetup_"
 # }
 
-# Install-OneDrive @InstallOneDriveParams
+# Install-Software @installParams
