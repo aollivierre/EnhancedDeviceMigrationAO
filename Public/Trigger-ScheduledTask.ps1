@@ -1,4 +1,4 @@
-function Trigger-OneDriveSyncStatusTask {
+function Trigger-ScheduledTask {
     [CmdletBinding()]
     param (
         [string]$TaskPath,
@@ -6,7 +6,7 @@ function Trigger-OneDriveSyncStatusTask {
     )
 
     Begin {
-        Write-EnhancedLog -Message "Starting Trigger-OneDriveSyncStatusTask function" -Level "NOTICE"
+        Write-EnhancedLog -Message "Starting Trigger-ScheduledTask function" -Level "NOTICE"
         CheckAndElevate -ElevateIfNotAdmin $true
     }
 
@@ -31,7 +31,7 @@ function Trigger-OneDriveSyncStatusTask {
     }
 
     End {
-        Write-EnhancedLog -Message "Exiting Trigger-OneDriveSyncStatusTask function" -Level "NOTICE"
+        Write-EnhancedLog -Message "Exiting Trigger-ScheduledTask function" -Level "NOTICE"
     }
 }
 
@@ -43,4 +43,4 @@ function Trigger-OneDriveSyncStatusTask {
 # }
 
 # # Call the function with splatting
-# Trigger-OneDriveSyncStatusTask @taskParams
+# Trigger-ScheduledTask @taskParams

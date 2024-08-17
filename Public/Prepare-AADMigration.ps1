@@ -26,17 +26,6 @@ function Prepare-AADMigration {
     Begin {
         Write-EnhancedLog -Message "Starting Prepare-AADMigration function" -Level "Notice"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
-        # Log-Params -Params @{
-        #     MigrationPath       = $MigrationPath
-        #     PSScriptbase        = $PSScriptbase
-        #     ConfigBaseDirectory = $ConfigBaseDirectory
-        #     ConfigFileName      = $ConfigFileName
-        #     TenantID            = $TenantID
-        #     OneDriveKFM         = $OneDriveKFM
-        #     InstallOneDrive     = $InstallOneDrive
-        # }
-
-       
     }
 
     Process {
@@ -50,9 +39,9 @@ function Prepare-AADMigration {
       
             # Define the source and destination paths
             $sourcePath1 = $PSScriptbase
-            $sourcePath2 = "C:\code\modulesv2"
+            # $sourcePath2 = "C:\code\modulesv2"
             $destinationPath1 = $MigrationPath
-            $destinationPath2 = "$MigrationPath\modulesv2"
+            # $destinationPath2 = "$MigrationPath\modulesv2"
 
             # Copy files from $PSScriptRoot using the Copy-FilesToPath function
             # Copy-FilesToPath -SourcePath $sourcePath1 -DestinationPath $destinationPath1
@@ -84,6 +73,8 @@ function Prepare-AADMigration {
             # Execute the function with splatting
             Copy-FilesWithRobocopy @params
 
+            $DBG
+
 
             # Verify the copy operation for $PSScriptRoot
             Verify-CopyOperation -SourcePath $sourcePath1 -DestinationPath $destinationPath1
@@ -101,33 +92,33 @@ function Prepare-AADMigration {
 
 
             # Ensure the destination directory exists
-            if (-not (Test-Path -Path $destinationPath2)) {
-                New-Item -Path $destinationPath2 -ItemType Directory | Out-Null
-            }
+            # if (-not (Test-Path -Path $destinationPath2)) {
+            #     New-Item -Path $destinationPath2 -ItemType Directory | Out-Null
+            # }
 
 
-            $params = @{
-                Source          = $sourcePath2
-                Destination     = $destinationPath2
-                Exclude         = ".git"
-                RetryCount      = 2
-                WaitTime        = 5
-                RequiredSpaceGB = 10
-            }
+            # $params = @{
+            #     Source          = $sourcePath2
+            #     Destination     = $destinationPath2
+            #     Exclude         = ".git"
+            #     RetryCount      = 2
+            #     WaitTime        = 5
+            #     RequiredSpaceGB = 10
+            # }
 
             # Execute the function with splatting
-            Copy-FilesWithRobocopy @params
+            # Copy-FilesWithRobocopy @params
 
 
 
 
-            # Verify the copy operation for C:\code\modules
-            Verify-CopyOperation -SourcePath $sourcePath2 -DestinationPath $destinationPath2
+            # Verify the copy operation for C:\code\modulesv2
+            # Verify-CopyOperation -SourcePath $sourcePath2 -DestinationPath $destinationPath2
 
 
             # $DBG
 
-            Write-EnhancedLog -Message "Copied content from $PSScriptRoot to $MigrationPath" -Level "INFO"
+            # Write-EnhancedLog -Message "Copied content from $PSScriptRoot to $MigrationPath" -Level "INFO"
 
             # $DBG
 
@@ -195,23 +186,23 @@ function Prepare-AADMigration {
 
                 Unregister-ScheduledTaskWithLogging -TaskName "AADM Get OneDrive Sync Status"
 
-                # Example usage with splatting
-                $CreateOneDriveSyncStatusTaskParams = @{
-                    TaskPath               = "AAD Migration"
-                    TaskName               = "AADM Get OneDrive Sync Status"
-                    ScriptDirectory        = "C:\ProgramData\AADMigration\Scripts"
-                    ScriptName             = "Check-OneDriveSyncStatus.ps1"
-                    TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
-                    TaskRepetitionDuration = "P1D"
-                    TaskRepetitionInterval = "PT30M"
-                    TaskPrincipalGroupId   = "BUILTIN\Users"
-                    PowerShellPath         = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-                    TaskDescription        = "Get current OneDrive Sync Status and write to event log"
-                }
+                # # Example usage with splatting
+                # $CreateOneDriveSyncStatusTaskParams = @{
+                #     TaskPath               = "AAD Migration"
+                #     TaskName               = "AADM Get OneDrive Sync Status"
+                #     ScriptDirectory        = "C:\ProgramData\AADMigration\Scripts"
+                #     ScriptName             = "Check-OneDriveSyncStatus.ps1"
+                #     TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
+                #     TaskRepetitionDuration = "P1D"
+                #     TaskRepetitionInterval = "PT30M"
+                #     TaskPrincipalGroupId   = "BUILTIN\Users"
+                #     PowerShellPath         = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+                #     TaskDescription        = "Get current OneDrive Sync Status and write to event log"
+                # }
 
-                Create-OneDriveSyncStatusTask @CreateOneDriveSyncStatusTaskParams
+                # Create-OneDriveSyncStatusTask @CreateOneDriveSyncStatusTaskParams
 
-                $DBG
+                # $DBG
 
             }
 
@@ -245,6 +236,47 @@ function Prepare-AADMigration {
                
             }
 
+            # # Example usage with splatting
+            $CreateOneDriveSyncStatusTaskParams = @{
+                TaskPath               = "AAD Migration"
+                TaskName               = "AADM Get OneDrive Sync Status"
+                ScriptDirectory        = "C:\ProgramData\AADMigration\Scripts"
+                ScriptName             = "Check-OneDriveSyncStatus.ps1"
+                TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
+                TaskRepetitionDuration = "P1D"
+                TaskRepetitionInterval = "PT30M"
+                TaskPrincipalGroupId   = "BUILTIN\Users"
+                PowerShellPath         = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+                TaskDescription        = "Get current OneDrive Sync Status and write to event log"
+            }
+
+            Create-OneDriveSyncStatusTask @CreateOneDriveSyncStatusTaskParams
+
+
+            # Should we check OneDrive Sync before OR after the prep ? Currently this is being called after the Prep and I wonder if we should call it BEFORE the Prep instead
+            # Check-OneDriveSyncStatus -OneDriveLibPath "C:\ProgramData\AADMigration\Files\OneDriveLib.dll"
+
+            # Example usage
+            # Define parameters using a hashtable
+            $taskParams = @{
+                TaskPath = "\AAD Migration"
+                TaskName = "AADM Get OneDrive Sync Status"
+            }
+
+            # Trigger OneDrive Sync Status Scheduled Task
+            Trigger-ScheduledTask @taskParams
+
+
+
+
+            # Example usage with splatting
+            $AnalyzeParams = @{
+                LogFolder      = "C:\ProgramData\AADMigration\logs"
+                StatusFileName = "OneDriveSyncStatus.json"
+            }
+
+            Analyze-OneDriveSyncStatus @AnalyzeParams
+
 
 
             #Todo now we have OneDrive installed and running we need to actually start using our OneDrive for Business location on the local machine to copy user specific files into it as part of our On-prem AD to Entra ID migration prep so we need to copy the following PR4B projects from before
@@ -253,38 +285,72 @@ function Prepare-AADMigration {
             # 2- copy Downloads folders
             # any other user specific files
 
-            # Example usage
-            $BackupChromeBookmarksToOneDriveParams = @{
-                ChromeProfilePath = "$env:USERPROFILE\AppData\Local\Google\Chrome\User Data\Default"
-                BackupFolderName  = "ChromeBackup"
-                Exclude           = ".git"
-                RetryCount        = 2
-                WaitTime          = 5
-                RequiredSpaceGB   = 10
+
+            $CreateUserFileBackupTaskParams = @{
+                TaskPath               = "AAD Migration"
+                TaskName               = "User File Backup to OneDrive"
+                BackupScriptPath       = "C:\ProgramData\AADMigration\Scripts\BackupUserFiles.ps1"
+                TaskRepetitionDuration = "P1D"  # 1 day
+                TaskRepetitionInterval = "PT1H"  # 1 hour
+                TaskPrincipalGroupId   = "BUILTIN\USERS"
+                PowerShellPath         = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+                TaskDescription        = "Backup user files to a designated location"
             }
-            Backup-ChromeBookmarksToOneDrive @BackupChromeBookmarksToOneDriveParams
+
+            Create-UserFileBackupTask @CreateUserFileBackupTaskParams
 
 
-            $BackupOutlookSignaturesToOneDrive = @{
-                SignaturePath    = "$env:USERPROFILE\AppData\Roaming\Microsoft\Signatures"
-                BackupFolderName = "OutlookSignatures"
-                Exclude          = ".git"
-                RetryCount       = 2
-                WaitTime         = 5
-                RequiredSpaceGB  = 10
+            $taskParams = @{
+                TaskPath = "\AAD Migration"
+                TaskName = "User File Backup to OneDrive"
             }
-            Backup-OutlookSignaturesToOneDrive @BackupOutlookSignaturesToOneDrive
+
+            # Call the function with splatting
+            Trigger-ScheduledTask @taskParams
 
 
-            $BackupDownloadsToOneDriveParams = @{
-                DownloadsPath    = "$env:USERPROFILE\Downloads"
-                BackupFolderName = "DownloadsBackup"
-                Exclude          = ".git"
-                RetryCount       = 2
-                WaitTime         = 5
-                RequiredSpaceGB  = 10
+            # # Example usage with splatting
+            $AnalyzeParams = @{
+                LogFolder = "C:\ProgramData\AADMigration\logs"
+                StatusFileName = "UserFilesBackupStatus.json"
             }
-            Backup-DownloadsToOneDrive @BackupDownloadsToOneDriveParams
+
+            Analyze-CopyOperationStatus @AnalyzeParams
+
+
+
+            # # Example usage
+            # $BackupChromeBookmarksToOneDriveParams = @{
+            #     ChromeProfilePath = "$env:USERPROFILE\AppData\Local\Google\Chrome\User Data\Default"
+            #     BackupFolderName  = "ChromeBackup"
+            #     Exclude           = ".git"
+            #     RetryCount        = 2
+            #     WaitTime          = 5
+            #     RequiredSpaceGB   = 10
+            # }
+            # Backup-ChromeBookmarksToOneDrive @BackupChromeBookmarksToOneDriveParams
+
+
+            # $BackupOutlookSignaturesToOneDrive = @{
+            #     SignaturePath    = "$env:USERPROFILE\AppData\Roaming\Microsoft\Signatures"
+            #     BackupFolderName = "OutlookSignatures"
+            #     Exclude          = ".git"
+            #     RetryCount       = 2
+            #     WaitTime         = 5
+            #     RequiredSpaceGB  = 10
+            # }
+            # Backup-OutlookSignaturesToOneDrive @BackupOutlookSignaturesToOneDrive
+
+
+            # $BackupDownloadsToOneDriveParams = @{
+            #     DownloadsPath    = "$env:USERPROFILE\Downloads"
+            #     BackupFolderName = "DownloadsBackup"
+            #     Exclude          = ".git"
+            #     RetryCount       = 2
+            #     WaitTime         = 5
+            #     RequiredSpaceGB  = 10
+            # }
+            # Backup-DownloadsToOneDrive @BackupDownloadsToOneDriveParams
 
         }
         catch {
