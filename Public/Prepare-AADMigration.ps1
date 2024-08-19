@@ -55,9 +55,15 @@ function Prepare-AADMigration {
             # Copy-FilesToPathWithKill -SourcePath $sourcePath1 -DestinationPath $destinationPath1
 
             # Ensure the destination directory exists
-            if (-not (Test-Path -Path $destinationPath1)) {
-                New-Item -Path $destinationPath1 -ItemType Directory | Out-Null
+            if (Test-Path -Path $destinationPath1) {
+                Write-EnhancedLog -Message "Destination directory already exists. Removing: $destinationPath1" -Level "WARNING"
+                Remove-Item -Path $destinationPath1 -Recurse -Force
+                Write-EnhancedLog -Message "Destination directory removed: $destinationPath1" -Level "INFO"
             }
+
+            # Create a new destination directory
+            New-Item -Path $destinationPath1 -ItemType Directory | Out-Null
+            Write-EnhancedLog -Message "New destination directory created: $destinationPath1" -Level "INFO"
 
 
             $params = @{
@@ -237,11 +243,27 @@ function Prepare-AADMigration {
             }
 
             # # Example usage with splatting
+            # $CreateOneDriveSyncStatusTaskParams = @{
+            #     TaskPath               = "AAD Migration"
+            #     TaskName               = "AADM Get OneDrive Sync Status"
+            #     ScriptDirectory        = "C:\ProgramData\AADMigration\Scripts"
+            #     ScriptName             = "Check-OneDriveSyncStatus.ps1"
+            #     TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
+            #     TaskRepetitionDuration = "P1D"
+            #     TaskRepetitionInterval = "PT30M"
+            #     TaskPrincipalGroupId   = "BUILTIN\Users"
+            #     PowerShellPath         = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+            #     TaskDescription        = "Get current OneDrive Sync Status and write to event log"
+            # }
+
+            # Create-OneDriveSyncStatusTask @CreateOneDriveSyncStatusTaskParams
+
+
             $CreateOneDriveSyncStatusTaskParams = @{
                 TaskPath               = "AAD Migration"
-                TaskName               = "AADM Get OneDrive Sync Status"
+                TaskName               = "AADM Get OneDrive Sync Util Status"
                 ScriptDirectory        = "C:\ProgramData\AADMigration\Scripts"
-                ScriptName             = "Check-OneDriveSyncStatus.ps1"
+                ScriptName             = "Check-ODSyncUtilStatus.ps1"
                 TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
                 TaskRepetitionDuration = "P1D"
                 TaskRepetitionInterval = "PT30M"
@@ -250,7 +272,7 @@ function Prepare-AADMigration {
                 TaskDescription        = "Get current OneDrive Sync Status and write to event log"
             }
 
-            Create-OneDriveSyncStatusTask @CreateOneDriveSyncStatusTaskParams
+            Create-OneDriveSyncUtilStatusTask @CreateOneDriveSyncStatusTaskParams
 
 
             # Should we check OneDrive Sync before OR after the prep ? Currently this is being called after the Prep and I wonder if we should call it BEFORE the Prep instead
@@ -258,24 +280,37 @@ function Prepare-AADMigration {
 
             # Example usage
             # Define parameters using a hashtable
+            # $taskParams = @{
+            #     TaskPath = "\AAD Migration"
+            #     TaskName = "AADM Get OneDrive Sync Status"
+            # }
+
+            # # Trigger OneDrive Sync Status Scheduled Task
+            # Trigger-ScheduledTask @taskParams
+
+
             $taskParams = @{
                 TaskPath = "\AAD Migration"
-                TaskName = "AADM Get OneDrive Sync Status"
+                TaskName = "AADM Get OneDrive Sync Util Status"
             }
 
             # Trigger OneDrive Sync Status Scheduled Task
             Trigger-ScheduledTask @taskParams
 
+            # # Example usage with splatting
+            # $AnalyzeParams = @{
+            #     LogFolder      = "C:\ProgramData\AADMigration\logs"
+            #     StatusFileName = "OneDriveSyncStatus.json"
+            # }
 
+            # Analyze-OneDriveSyncStatus @AnalyzeParams
 
-
-            # Example usage with splatting
-            $AnalyzeParams = @{
-                LogFolder      = "C:\ProgramData\AADMigration\logs"
-                StatusFileName = "OneDriveSyncStatus.json"
+            # # # Example usage
+            $AnalyzeOneDriveSyncUtilStatusParams = @{
+                LogFolder     = "C:\ProgramData\AADMigration\logs"
+                StatusFileName = "ODSyncUtilStatus.json"
             }
-
-            Analyze-OneDriveSyncStatus @AnalyzeParams
+            Analyze-OneDriveSyncUtilStatus @AnalyzeOneDriveSyncUtilStatusParams
 
 
 
@@ -308,10 +343,9 @@ function Prepare-AADMigration {
             # Call the function with splatting
             Trigger-ScheduledTask @taskParams
 
-
             # # Example usage with splatting
             $AnalyzeParams = @{
-                LogFolder = "C:\ProgramData\AADMigration\logs"
+                LogFolder      = "C:\ProgramData\AADMigration\logs"
                 StatusFileName = "UserFilesBackupStatus.json"
             }
 
