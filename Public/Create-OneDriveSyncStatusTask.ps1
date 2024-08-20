@@ -41,10 +41,14 @@ function Create-OneDriveSyncStatusTask {
 
     Process {
         try {
+
+            # Unregister the task if it exists
+            Unregister-ScheduledTaskWithLogging -TaskName $TaskName
+
             $arguments = $TaskArguments.Replace("{ScriptPath}", "$ScriptDirectory\$ScriptName")
 
             $actionParams = @{
-                Execute = $PowerShellPath
+                Execute  = $PowerShellPath
                 Argument = $arguments
             }
             $action = New-ScheduledTaskAction @actionParams
@@ -60,12 +64,12 @@ function Create-OneDriveSyncStatusTask {
             $principal = New-ScheduledTaskPrincipal @principalParams
 
             $registerTaskParams = @{
-                Principal = $principal
-                Action = $action
-                Trigger = $trigger
-                TaskName = $TaskName
+                Principal   = $principal
+                Action      = $action
+                Trigger     = $trigger
+                TaskName    = $TaskName
                 Description = $TaskDescription
-                TaskPath = $TaskPath
+                TaskPath    = $TaskPath
             }
             $Task = Register-ScheduledTask @registerTaskParams
 

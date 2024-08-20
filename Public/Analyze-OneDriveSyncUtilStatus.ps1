@@ -15,10 +15,13 @@ function Analyze-OneDriveSyncUtilStatus {
     .EXAMPLE
     $params = @{
         LogFolder     = "C:\ProgramData\AADMigration\logs"
-        StatusFileName = "OneDriveSyncStatus.json"
+        StatusFileName = "ODSyncUtilStatus.json"
     }
-    Analyze-OneDriveSyncUtilStatus @params
-    Analyzes the OneDrive sync status from the specified JSON file.
+    $result = Analyze-OneDriveSyncUtilStatus @params
+    if ($result.Status -eq "Healthy") {
+        # Do something if healthy
+    }
+    # Analyzes the OneDrive sync status from the specified JSON file and returns an object.
     #>
 
     [CmdletBinding()]
@@ -73,22 +76,37 @@ function Analyze-OneDriveSyncUtilStatus {
             $InProgress = @("Syncing", "SharedSync", "Shared Sync")
             $Failed = @("Error", "ReadOnly", "Read Only", "OnDemandOrUnknown", "On Demand or Unknown", "Paused")
 
-            # Analyze the status
+            # Analyze the status and return an object
             $StatusString = $Status.CurrentStateString
             $UserName = $Status.UserName
+            $result = [PSCustomObject]@{
+                UserName = $UserName
+                Status   = $null
+                Message  = $null
+            }
 
             if ($StatusString -in $Success) {
-                Write-EnhancedLog -Message "OneDrive sync status is healthy: User: $UserName, Status: $StatusString" -Level "INFO"
+                $result.Status = "Healthy"
+                $result.Message = "OneDrive sync status is healthy"
+                Write-EnhancedLog -Message "$($result.Message): User: $UserName, Status: $StatusString" -Level "INFO"
             }
             elseif ($StatusString -in $InProgress) {
-                Write-EnhancedLog -Message "OneDrive sync status is currently syncing: User: $UserName, Status: $StatusString" -Level "WARNING"
+                $result.Status = "InProgress"
+                $result.Message = "OneDrive sync status is currently syncing"
+                Write-EnhancedLog -Message "$($result.Message): User: $UserName, Status: $StatusString" -Level "WARNING"
             }
             elseif ($StatusString -in $Failed) {
-                Write-EnhancedLog -Message "OneDrive sync status is in a known error state: User: $UserName, Status: $StatusString" -Level "ERROR"
+                $result.Status = "Failed"
+                $result.Message = "OneDrive sync status is in a known error state"
+                Write-EnhancedLog -Message "$($result.Message): User: $UserName, Status: $StatusString" -Level "ERROR"
             }
             else {
-                Write-EnhancedLog -Message "Unable to determine OneDrive Sync Status for User: $UserName" -Level "WARNING"
+                $result.Status = "Unknown"
+                $result.Message = "Unable to determine OneDrive Sync Status"
+                Write-EnhancedLog -Message "$($result.Message) for User: $UserName" -Level "WARNING"
             }
+
+            return $result
         }
         catch {
             Write-EnhancedLog -Message "An error occurred in Analyze-OneDriveSyncUtilStatus function: $($_.Exception.Message)" -Level "ERROR"
@@ -102,9 +120,20 @@ function Analyze-OneDriveSyncUtilStatus {
     }
 }
 
-# # # Example usage
+# # Example usage
 # $params = @{
 #     LogFolder     = "C:\ProgramData\AADMigration\logs"
 #     StatusFileName = "ODSyncUtilStatus.json"
 # }
-# Analyze-OneDriveSyncUtilStatus @params
+# $result = Analyze-OneDriveSyncUtilStatus @params
+
+# # Example decision-making based on the result
+# if ($result.Status -eq "Healthy") {
+#     Write-Host "OneDrive is healthy, no further action required."
+# } elseif ($result.Status -eq "InProgress") {
+#     Write-Host "OneDrive is syncing, please wait..."
+# } elseif ($result.Status -eq "Failed") {
+#     Write-Host "OneDrive has encountered an error, please investigate."
+# } else {
+#     Write-Host "OneDrive status is unknown, further analysis required."
+# }

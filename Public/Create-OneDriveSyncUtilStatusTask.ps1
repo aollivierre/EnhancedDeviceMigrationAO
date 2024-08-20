@@ -20,38 +20,34 @@ function Create-OneDriveSyncUtilStatusTask {
         [Parameter(Mandatory = $true)]
         [string]$PowerShellPath,
         [Parameter(Mandatory = $true)]
-        [string]$TaskDescription
+        [string]$TaskDescription,
+        [Parameter(Mandatory = $true)]
+        [switch]$AtLogOn
+
     )
 
     Begin {
         Write-EnhancedLog -Message "Starting Create-OneDriveSyncUtilStatusTask function" -Level "Notice"
-        Log-Params -Params @{
-            TaskPath               = $TaskPath
-            TaskName               = $TaskName
-            ScriptDirectory        = $ScriptDirectory
-            ScriptName             = $ScriptName
-            TaskArguments          = $TaskArguments
-            TaskRepetitionDuration = $TaskRepetitionDuration
-            TaskRepetitionInterval = $TaskRepetitionInterval
-            TaskPrincipalGroupId   = $TaskPrincipalGroupId
-            PowerShellPath         = $PowerShellPath
-            TaskDescription        = $TaskDescription
-        }
+        Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
     Process {
         try {
+            # Unregister the task if it exists
+            Unregister-ScheduledTaskWithLogging -TaskName $TaskName
+
             $arguments = $TaskArguments.Replace("{ScriptPath}", "$ScriptDirectory\$ScriptName")
 
             $actionParams = @{
-                Execute = $PowerShellPath
+                Execute  = $PowerShellPath
                 Argument = $arguments
             }
             $action = New-ScheduledTaskAction @actionParams
 
             $triggerParams = @{
-                AtLogOn = $true
+                AtLogOn = $AtLogOn
             }
+            
             $trigger = New-ScheduledTaskTrigger @triggerParams
 
             $principalParams = @{
@@ -60,12 +56,12 @@ function Create-OneDriveSyncUtilStatusTask {
             $principal = New-ScheduledTaskPrincipal @principalParams
 
             $registerTaskParams = @{
-                Principal = $principal
-                Action = $action
-                Trigger = $trigger
-                TaskName = $TaskName
+                Principal   = $principal
+                Action      = $action
+                Trigger     = $trigger
+                TaskName    = $TaskName
                 Description = $TaskDescription
-                TaskPath = $TaskPath
+                TaskPath    = $TaskPath
             }
             $Task = Register-ScheduledTask @registerTaskParams
 
@@ -84,18 +80,19 @@ function Create-OneDriveSyncUtilStatusTask {
     }
 }
 
-# # Example usage with splatting
-# $CreateOneDriveSyncStatusTaskParams = @{
-#     TaskPath                = "AAD Migration"
-#     TaskName                = "AADM Get OneDrive Sync Status"
-#     ScriptDirectory         = "C:\ProgramData\AADMigration\Scripts"
-#     ScriptName              = "Check-OneDriveSyncStatus.ps1"
-#     TaskArguments           = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
-#     TaskRepetitionDuration  = "P1D"
-#     TaskRepetitionInterval  = "PT30M"
-#     TaskPrincipalGroupId    = "BUILTIN\Users"
-#     PowerShellPath          = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-#     TaskDescription         = "Get current OneDrive Sync Status and write to event log"
+# # # # Example usage with splatting
+# $CreateOneDriveSyncUtilStatusTask = @{
+#     TaskPath               = "AAD Migration"
+#     TaskName               = "AADM Get OneDrive Sync Status"
+#     ScriptDirectory        = "C:\ProgramData\AADMigration\Scripts"
+#     ScriptName             = "Check-OneDriveSyncStatus.ps1"
+#     TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
+#     TaskRepetitionDuration = "P1D"
+#     TaskRepetitionInterval = "PT30M"
+#     TaskPrincipalGroupId   = "BUILTIN\Users"
+#     PowerShellPath         = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+#     TaskDescription        = "Get current OneDrive Sync Status and write to event log"
+#     AtLogOn                = $true
 # }
 
-# Create-OneDriveSyncUtilStatusTask @CreateOneDriveSyncStatusTaskParams
+# Create-OneDriveSyncUtilStatusTask @CreateOneDriveSyncUtilStatusTask

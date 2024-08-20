@@ -22,42 +22,27 @@ function Main-MigrateToAADJOnly {
 
     Begin {
         Write-EnhancedLog -Message "Starting Main-MigrateToAADJOnly function" -Level "Notice"
-        Log-Params -Params @{
-            PPKGName            = $PPKGName;
-            DomainLeaveUser     = $DomainLeaveUser;
-            DomainLeavePassword = $DomainLeavePassword;
-            TempUser            = $TempUser;
-            TempUserPassword    = $TempUserPassword;
-            ScriptPath          = $ScriptPath;
-        }
+        Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
+    }
 
-        # Initialize steps
-        $global:steps = @()
-        Add-Step -description "Testing provisioning package" -action { 
-
+    Process {
+        try {
+            # Test provisioning package
             $TestProvisioningPackParams = @{
                 PPKGName = $PPKGName
             }
-
             Test-ProvisioningPack @TestProvisioningPackParams
 
-        }
-        # Add-Step -description "Adding local user" -action { Add-LocalUser -TempUser $TempUser -TempUserPassword $TempUserPassword }
-        Add-Step -description "Adding local user" -action { 
+            # Add local user
             $AddLocalUserParams = @{
                 TempUser         = $TempUser
                 TempUserPassword = $TempUserPassword
                 Description      = "account for autologin"
                 Group            = "Administrators"
             }
-            
-            # Example usage with splatting
             Add-LocalUser @AddLocalUserParams
-        }
-        Add-Step -description "Setting autologin" -action { 
 
-
-            # Example usage with splatting
+            # Set autologin
             $SetAutologinParams = @{
                 TempUser            = $TempUser
                 TempUserPassword    = $TempUserPassword
@@ -67,14 +52,9 @@ function Main-MigrateToAADJOnly {
                 DefaultUsernameName = 'DefaultUsername'
                 DefaultPasswordName = 'DefaultPassword'
             }
-
             Set-Autologin @SetAutologinParams
 
-        }
-        Add-Step -description "Disabling OOBE privacy" -action { 
-
-
-            # Example usage with splatting
+            # Disable OOBE privacy
             $DisableOOBEPrivacyParams = @{
                 OOBERegistryPath      = 'HKLM:\Software\Policies\Microsoft\Windows\OOBE'
                 OOBEName              = 'DisablePrivacyExperience'
@@ -86,14 +66,9 @@ function Main-MigrateToAADJOnly {
                 LockName              = 'NoLockScreen'
                 LockValue             = '1'
             }
-
             Disable-OOBEPrivacy @DisableOOBEPrivacyParams
 
-        }
-        Add-Step -description "Setting RunOnce script" -action { 
-
-
-            # Example usage with splatting
+            # Set RunOnce script
             $SetRunOnceParams = @{
                 ScriptPath      = $ScriptPath
                 RunOnceKey      = "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce"
@@ -101,28 +76,16 @@ function Main-MigrateToAADJOnly {
                 ExecutionPolicy = "Unrestricted"
                 RunOnceName     = "NextRun"
             }
-
             Set-RunOnce @SetRunOnceParams
-        }
-        Add-Step -description "Suspending BitLocker With Reboot Count" -action {
 
-            # Example usage with splatting
+            # Suspend BitLocker with reboot count
             $SuspendBitLockerWithRebootParams = @{
                 MountPoint  = "C:"
                 RebootCount = 3
             }
-
             Suspend-BitLockerWithReboot @SuspendBitLockerWithRebootParams
 
-        }
-        Add-Step -description "Removing Intune management" -action { 
-
-            # $RemoveCompanyPortalParams = @{
-            #     AppxPackageName = "Microsoft.CompanyPortal"
-            # }
-
-            # Remove-CompanyPortal @RemoveCompanyPortalParams
-
+            # Remove Intune management
             $RemoveIntuneMgmtParams = @{
                 OMADMPath             = "HKLM:\SOFTWARE\Microsoft\Provisioning\OMADM\Accounts\*"
                 EnrollmentBasePath    = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Enrollments"
@@ -146,34 +109,20 @@ function Main-MigrateToAADJOnly {
                 UserCertIssuer        = "CN=SC_Online_Issuing"
                 DeviceCertIssuers     = @("CN=Microsoft Intune Root Certification Authority", "CN=Microsoft Intune MDM Device CA")
             }
-
             Remove-IntuneMgmt @RemoveIntuneMgmtParams
 
-        }
-        Add-Step -description "Removing hybrid join" -action { Remove-Hybrid }
-        Add-Step -description "Removing AD join" -action { 
+            # Remove hybrid join
+            Remove-Hybrid
 
-
+            # Remove AD join
             $RemoveADJoinParams = @{
-                # DomainLeaveUser     = $DomainLeaveUser
-                # DomainLeavePassword = $DomainLeavePassword
                 TempUser         = $TempUser
                 TempUserPassword = $TempUserPassword
                 ComputerName     = "localhost"
                 TaskName         = "AADM Launch PSADT for Interactive Migration"
             }
-            
             Remove-ADJoin @RemoveADJoinParams
 
-
-        }
-    }
-
-    Process {
-        try {
-            foreach ($step in $global:steps) {
-                Log-And-Execute-Step -Step $step
-            }
         }
         catch {
             Write-EnhancedLog -Message "An error occurred: $($_.Exception.Message)" -Level "ERROR"
@@ -185,6 +134,7 @@ function Main-MigrateToAADJOnly {
         Write-EnhancedLog -Message "Exiting Main-MigrateToAADJOnly function" -Level "Notice"
     }
 }
+
 
 # $MainMigrateParams = @{
 #     PPKGName            = "YourProvisioningPackName"

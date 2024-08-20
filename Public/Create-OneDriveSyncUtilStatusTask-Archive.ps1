@@ -1,33 +1,48 @@
-function Create-UserFileBackupTask {
+
+# iex ((irm "https://raw.githubusercontent.com/aollivierre/module-starter/main/Module-Starter.ps1") -replace '\$Mode = "dev"', '$Mode = "dev"')
+
+function Create-OneDriveSyncUtilStatusTask {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
         [string]$TaskPath,
+        
         [Parameter(Mandatory = $true)]
         [string]$TaskName,
+        
         [Parameter(Mandatory = $true)]
         [string]$ScriptDirectory,
+        
         [Parameter(Mandatory = $true)]
         [string]$ScriptName,
+        
         [Parameter(Mandatory = $true)]
         [string]$TaskArguments,
+        
         [Parameter(Mandatory = $true)]
-        [string]$TaskRepetitionDuration,
-        [Parameter(Mandatory = $true)]
-        [string]$TaskRepetitionInterval,
-        [Parameter(Mandatory = $true)]
-        [string]$TaskPrincipalGroupId,
+        [string]$TaskPrincipalUserId,
+        
         [Parameter(Mandatory = $true)]
         [string]$PowerShellPath,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$TaskRunLevel,
+        
         [Parameter(Mandatory = $true)]
         [string]$TaskDescription,
+        
         [Parameter(Mandatory = $true)]
-        [switch]$AtLogOn
-
+        [string]$TaskTriggerType,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$TaskRepetitionDuration,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$TaskRepetitionInterval
     )
 
     Begin {
-        Write-EnhancedLog -Message "Starting Create-UserFileBackupTask function" -Level "Notice"
+        Write-EnhancedLog -Message "Starting Create-OneDriveSyncUtilStatusTask function" -Level "Notice"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
@@ -44,17 +59,20 @@ function Create-UserFileBackupTask {
             }
             $action = New-ScheduledTaskAction @actionParams
 
+            # Create the scheduled task trigger based on the type provided
             $triggerParams = @{
-                AtLogOn = $AtLogOn
+                $TaskTriggerType = $true
             }
-            
             $trigger = New-ScheduledTaskTrigger @triggerParams
 
+            # Create the scheduled task principal
             $principalParams = @{
-                GroupId = $TaskPrincipalGroupId
+                UserId   = $TaskPrincipalUserId
+                RunLevel = $TaskRunLevel
             }
             $principal = New-ScheduledTaskPrincipal @principalParams
 
+            # Register the scheduled task
             $registerTaskParams = @{
                 Principal   = $principal
                 Action      = $action
@@ -65,6 +83,7 @@ function Create-UserFileBackupTask {
             }
             $Task = Register-ScheduledTask @registerTaskParams
 
+            # Set repetition properties
             $Task.Triggers.Repetition.Duration = $TaskRepetitionDuration
             $Task.Triggers.Repetition.Interval = $TaskRepetitionInterval
             $Task | Set-ScheduledTask
@@ -76,23 +95,24 @@ function Create-UserFileBackupTask {
     }
 
     End {
-        Write-EnhancedLog -Message "Exiting Create-UserFileBackupTask function" -Level "Notice"
+        Write-EnhancedLog -Message "Exiting Create-OneDriveSyncUtilStatusTask function" -Level "Notice"
     }
 }
 
-# # # # Example usage with splatting
-# $CreateUserFileBackupTaskParams = @{
+# Example usage with splatting
+# $CreateOneDriveSyncStatusTaskParams = @{
 #     TaskPath               = "AAD Migration"
-#     TaskName               = "Backup User Files"
+#     TaskName               = "AADM Get OneDrive Sync Status"
 #     ScriptDirectory        = "C:\ProgramData\AADMigration\Scripts"
-#     ScriptName             = "BackupUserFiles.ps1"
+#     ScriptName             = "Check-OneDriveSyncStatus.ps1"
 #     TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
 #     TaskRepetitionDuration = "P1D"
 #     TaskRepetitionInterval = "PT30M"
-#     TaskPrincipalGroupId   = "BUILTIN\Users"
+#     TaskTriggerType        = "AtLogOn"
+#     TaskPrincipalUserId    = "BUILTIN\Users"
 #     PowerShellPath         = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-#     TaskDescription        = "Backup User Files to OneDrive"
-#     AtLogOn                = $true
+#     TaskRunLevel           = "Highest"
+#     TaskDescription        = "Get current OneDrive Sync Status and write to event log"
 # }
 
-# Create-UserFileBackupTask @CreateUserFileBackupTaskParams
+# Create-OneDriveSyncUtilStatusTask @CreateOneDriveSyncStatusTaskParams

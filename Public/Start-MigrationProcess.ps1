@@ -72,7 +72,7 @@ function Start-MigrationProcess {
 
     Process {
         try {
-            Start-Transcript -Path "C:\ProgramData\AADMigration\Logs\AD2AADJ-R1.txt" -NoClobber
+            # Start-Transcript -Path "C:\ProgramData\AADMigration\Logs\AD2AADJ-R1.txt" -NoClobber
 
             $MigrationConfig = Import-LocalizedData -BaseDirectory (Split-Path -Path $MigrationConfigPath) -FileName (Split-Path -Path $MigrationConfigPath -Leaf)
             $PPKGName = $MigrationConfig.ProvisioningPack
@@ -107,7 +107,7 @@ function Start-MigrationProcess {
             }
             Install-PPKG @installParams
 
-            Stop-Transcript
+            # Stop-Transcript
 
             # Unblock user input and close form
             Block-UserInput -Block $false
