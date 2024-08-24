@@ -16,22 +16,50 @@ function Add-LocalUser {
 
     Begin {
         Write-EnhancedLog -Message "Starting Add-LocalUser function" -Level "INFO"
-        Log-Params -Params @{ 
-            TempUser         = $TempUser
-            TempUserPassword = $TempUserPassword
-            Description      = $Description
-            Group            = $Group
-        }
+        Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
     Process {
         try {
-            Write-EnhancedLog -Message "Creating Local User Account" -Level "INFO"
-            $Password = ConvertTo-SecureString -AsPlainText $TempUserPassword -Force
-            New-LocalUser -Name $TempUser -Password $Password -Description $Description -AccountNeverExpires
-            Add-LocalGroupMember -Group $Group -Member $TempUser
+            # Check if the user already exists
+            $userExists = Get-LocalUser -Name $TempUser -ErrorAction SilentlyContinue
+
+            if (-not $userExists) {
+                Write-EnhancedLog -Message "Creating Local User Account '$TempUser'" -Level "INFO"
+                $Password = ConvertTo-SecureString -AsPlainText $TempUserPassword -Force
+                New-LocalUser -Name $TempUser -Password $Password -Description $Description -AccountNeverExpires
+                Write-EnhancedLog -Message "Local user account '$TempUser' created successfully." -Level "INFO"
+            } else {
+                Write-EnhancedLog -Message "Local user account '$TempUser' already exists." -Level "WARNING"
+            }
+
+            # Check if the user is already a member of the specified group
+            $group = Get-LocalGroup -Name $Group
+            $memberExists = $null
+            try {
+                $memberExists = $group | Get-LocalGroupMember | Where-Object { $_.Name -eq $TempUser }
+            } catch {
+                Write-EnhancedLog -Message "Failed to retrieve group members: $_" -Level 'ERROR'
+            }
+
+            if (-not $memberExists) {
+                # Add the user to the specified group
+                $groupParams = @{
+                    Group  = $Group
+                    Member = $TempUser
+                }
+                try {
+                    Add-LocalGroupMember @groupParams
+                    Write-EnhancedLog -Message "User '$TempUser' added to the '$Group' group." -Level "INFO"
+                } catch [Microsoft.PowerShell.Commands.AddLocalGroupMemberCommand+MemberExistsException] {
+                    Write-EnhancedLog -Message "User '$TempUser' is already a member of the '$Group' group." -Level 'WARNING'
+                }
+            } else {
+                Write-EnhancedLog -Message "User '$TempUser' is already a member of the '$Group' group." -Level 'WARNING'
+            }
+
         } catch {
-            Write-EnhancedLog -Message "An error occurred while adding local user: $($_.Exception.Message)" -Level "ERROR"
+            Write-EnhancedLog -Message "An error occurred while adding local user or adding to group: $($_.Exception.Message)" -Level "ERROR"
             Handle-Error -ErrorRecord $_
         }
     }
@@ -41,7 +69,7 @@ function Add-LocalUser {
     }
 }
 
-# # Define parameters
+# # # Define parameters
 # $AddLocalUserParams = @{
 #     TempUser         = "YourTempUser"
 #     TempUserPassword = "YourTempUserPassword"

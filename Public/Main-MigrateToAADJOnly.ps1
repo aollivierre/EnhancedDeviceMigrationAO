@@ -119,7 +119,8 @@ function Main-MigrateToAADJOnly {
                 TempUser         = $TempUser
                 TempUserPassword = $TempUserPassword
                 ComputerName     = "localhost"
-                TaskName         = "AADM Launch PSADT for Interactive Migration"
+                TaskName         = "PR4B-AADM Launch PSADT for Interactive Migration"
+                TaskPath         = "\AAD Migration\"
             }
             Remove-ADJoin @RemoveADJoinParams
 
