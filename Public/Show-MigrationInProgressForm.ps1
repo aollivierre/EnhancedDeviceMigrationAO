@@ -57,9 +57,9 @@ function Show-MigrationInProgressForm {
             Write-EnhancedLog -Message "Displayed migration in progress form." -Level "INFO"
 
             # Keep the form open
-            while ($form.Visible) {
-                [System.Windows.Forms.Application]::DoEvents()
-            }
+            # while ($form.Visible) {
+            #     [System.Windows.Forms.Application]::DoEvents()
+            # }
         }
         catch {
             Write-EnhancedLog -Message "An error occurred in Show-MigrationInProgressForm function: $($_.Exception.Message)" -Level "ERROR"

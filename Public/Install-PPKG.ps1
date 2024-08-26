@@ -23,6 +23,10 @@ function Install-PPKG {
 
     [CmdletBinding()]
     param (
+
+        # [Parameter(Mandatory = $true)]
+        # [string]$PPKPath,
+
         [Parameter(Mandatory = $true)]
         [string]$PPKGName,
 
@@ -37,12 +41,15 @@ function Install-PPKG {
 
     Process {
         try {
-            $ppkgPath = Join-Path -Path $MigrationPath -ChildPath "Files\$PPKGName"
-            if (-not (Test-Path -Path $ppkgPath)) {
-                Throw "Provisioning package file not found: $ppkgPath"
+            # $ppkgPath = Join-Path -Path $MigrationPath -ChildPath "Files\$PPKGName"
+
+            if (-not (Test-Path -Path $PPKGName)) {
+                Throw "Provisioning package file not found: $PPKGName"
             }
 
-            Write-EnhancedLog -Message "Installing provisioning package: $ppkgPath" -Level "INFO"
+            Write-EnhancedLog -Message "Installing provisioning package: $PPKGName" -Level "INFO"
+
+            $DBG
 
             $params = @{
                 PackagePath  = $ppkgPath
@@ -51,7 +58,19 @@ function Install-PPKG {
             }
 
             Install-ProvisioningPackage @params
-            Write-EnhancedLog -Message "Provisioning package installed successfully." -Level "INFO"
+            # Write-EnhancedLog -Message "Provisioning package installed successfully." -Level "INFO"
+
+            # Validate provisioning package installation
+            Write-EnhancedLog -Message "Validating provisioning package installation" -Level "INFO"
+            $isInstalled = Validate-PPKGInstallation -PPKGName $PPKGName
+            if ($isInstalled) {
+                Write-EnhancedLog -Message "Provisioning package $PPKGName installed successfully" -Level "INFO"
+            }
+            else {
+                Write-EnhancedLog -Message "Provisioning package $PPKGName installation failed" -Level "ERROR"
+                throw "Provisioning package $PPKGName installation could not be validated"
+            }
+
         }
         catch {
             Write-EnhancedLog -Message "An error occurred in Install-PPKG function: $($_.Exception.Message)" -Level "ERROR"
