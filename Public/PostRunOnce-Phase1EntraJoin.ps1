@@ -4,7 +4,7 @@ function PostRunOnce-Phase1EntraJoin {
     Starts the migration process by configuring settings, blocking user input, displaying a progress form, installing a provisioning package, and optionally restarting the computer.
 
     .DESCRIPTION
-    The Start-MigrationProcess function configures migration settings, blocks user input, displays a migration progress form, sets a RunOnce script for post-reboot tasks, installs a provisioning package, and then optionally restarts the computer. The function includes validation of the provisioning package installation using the Get-ProvisioningPackage cmdlet.
+    The PostRunOnce-Phase1EntraJoin function configures migration settings, blocks user input, displays a migration progress form, sets a RunOnce script for post-reboot tasks, installs a provisioning package, and then optionally restarts the computer. The function includes validation of the provisioning package installation using the Get-ProvisioningPackage cmdlet.
 
     .PARAMETER MigrationConfigPath
     The path to the migration configuration file.
@@ -41,7 +41,7 @@ function PostRunOnce-Phase1EntraJoin {
         RunOnceName = "NextRun"
         RebootAfterInstallation = $false
     }
-    Start-MigrationProcess @params
+    PostRunOnce-Phase1EntraJoin @params
     Starts the migration process without restarting the computer after installation.
 
     .EXAMPLE
@@ -54,7 +54,7 @@ function PostRunOnce-Phase1EntraJoin {
         ExecutionPolicy = "Unrestricted"
         RunOnceName = "NextRun"
     }
-    Start-MigrationProcess @params
+    PostRunOnce-Phase1EntraJoin @params
     Starts the migration process and restarts the computer after installation.
     #>
 
@@ -86,7 +86,7 @@ function PostRunOnce-Phase1EntraJoin {
     )
 
     Begin {
-        Write-EnhancedLog -Message "Starting Start-MigrationProcess function" -Level "Notice"
+        Write-EnhancedLog -Message "Starting PostRunOnce-Phase1EntraJoin function" -Level "Notice"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
@@ -160,6 +160,6 @@ function PostRunOnce-Phase1EntraJoin {
     }
 
     End {
-        Write-EnhancedLog -Message "Exiting Start-MigrationProcess function" -Level "Notice"
+        Write-EnhancedLog -Message "Exiting PostRunOnce-Phase1EntraJoin function" -Level "Notice"
     }
 }
