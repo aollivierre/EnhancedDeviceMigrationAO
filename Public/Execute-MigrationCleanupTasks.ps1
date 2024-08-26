@@ -4,7 +4,7 @@ function Execute-MigrationCleanupTasks {
     Executes post-run operations for the third phase of the migration process.
   
     .DESCRIPTION
-    The PostRunOnce3 function performs cleanup tasks after migration, including removing temporary user accounts, disabling local user accounts, removing scheduled tasks, clearing OneDrive cache, and setting registry values.
+    The Execute-MigrationCleanupTasks function performs cleanup tasks after migration, including removing temporary user accounts, disabling local user accounts, removing scheduled tasks, clearing OneDrive cache, and setting registry values.
   
     .PARAMETER TempUser
     The name of the temporary user account to be removed.
@@ -46,7 +46,7 @@ function Execute-MigrationCleanupTasks {
             "C:\ProgramData\AADMigration\Toolkit"
         )
     }
-    PostRunOnce3 @params
+    Execute-MigrationCleanupTasks @params
     Executes the post-run operations.
     #>
   
@@ -63,7 +63,7 @@ function Execute-MigrationCleanupTasks {
     )
   
     Begin {
-        Write-EnhancedLog -Message "Starting PostRunOnce3 function" -Level "Notice"
+        Write-EnhancedLog -Message "Starting Execute-MigrationCleanupTasks function" -Level "Notice"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
   
@@ -121,13 +121,13 @@ function Execute-MigrationCleanupTasks {
             Write-EnhancedLog -Message "OneDrive cache cleared" -Level "INFO"
         }
         catch {
-            Write-EnhancedLog -Message "An error occurred in PostRunOnce3 function: $($_.Exception.Message)" -Level "ERROR"
+            Write-EnhancedLog -Message "An error occurred in Execute-MigrationCleanupTasks function: $($_.Exception.Message)" -Level "ERROR"
             Handle-Error -ErrorRecord $_
         }
     }
   
     End {
-        Write-EnhancedLog -Message "Exiting PostRunOnce3 function" -Level "Notice"
+        Write-EnhancedLog -Message "Exiting Execute-MigrationCleanupTasks function" -Level "Notice"
     }
   }
   
