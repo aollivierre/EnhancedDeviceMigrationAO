@@ -39,6 +39,12 @@ function Analyze-OneDriveSyncUtilStatus {
 
         # Define the status file path
         $statusFile = Join-Path -Path $LogFolder -ChildPath $StatusFileName
+
+        # Remove the existing status file if found
+        if (Test-Path -Path $statusFile) {
+            Write-EnhancedLog -Message "Removing existing status file: $statusFile" -Level "INFO"
+            Remove-Item -Path $statusFile -Force
+        }
     }
 
     Process {
@@ -69,14 +75,17 @@ function Analyze-OneDriveSyncUtilStatus {
             }
 
             # Read the status file
+            Write-EnhancedLog -Message "Reading status file: $statusFile" -Level "INFO"
             $Status = Get-Content -Path $statusFile | ConvertFrom-Json
 
             # Define the status categories
+            Write-EnhancedLog -Message "Defining status categories for analysis" -Level "INFO"
             $Success = @("Synced", "UpToDate", "Up To Date")
             $InProgress = @("Syncing", "SharedSync", "Shared Sync")
             $Failed = @("Error", "ReadOnly", "Read Only", "OnDemandOrUnknown", "On Demand or Unknown", "Paused")
 
             # Analyze the status and return an object
+            Write-EnhancedLog -Message "Analyzing status from the JSON data" -Level "INFO"
             $StatusString = $Status.CurrentStateString
             $UserName = $Status.UserName
             $result = [PSCustomObject]@{
