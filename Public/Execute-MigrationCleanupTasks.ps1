@@ -14,6 +14,9 @@ function Execute-MigrationCleanupTasks {
   
     .PARAMETER MigrationDirectories
     An array of directories to be removed as part of migration cleanup.
+
+    .PARAMETER Mode
+    Specifies the mode in which the script should run. Options are "Dev" for development mode or "Prod" for production mode. This determines whether the `Disable-LocalUserAccounts` function will skip certain accounts.
   
     .EXAMPLE
     $params = @{
@@ -45,9 +48,10 @@ function Execute-MigrationCleanupTasks {
             "C:\ProgramData\AADMigration\Scripts",
             "C:\ProgramData\AADMigration\Toolkit"
         )
+        Mode = "Dev"
     }
     Execute-MigrationCleanupTasks @params
-    Executes the post-run operations.
+    Executes the post-run operations in Dev mode.
     #>
   
     [CmdletBinding()]
@@ -59,11 +63,15 @@ function Execute-MigrationCleanupTasks {
         [hashtable]$RegistrySettings,
   
         [Parameter(Mandatory = $true)]
-        [string[]]$MigrationDirectories
+        [string[]]$MigrationDirectories,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("Dev", "Prod")]
+        [string]$Mode
     )
   
     Begin {
-        Write-EnhancedLog -Message "Starting Execute-MigrationCleanupTasks function" -Level "Notice"
+        Write-EnhancedLog -Message "Starting Execute-MigrationCleanupTasks function in $Mode mode" -Level "Notice"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
   
@@ -78,9 +86,9 @@ function Execute-MigrationCleanupTasks {
             Write-EnhancedLog -Message "Temporary user account $TempUser removed" -Level "INFO"
   
             # Disable local user accounts
-            Write-EnhancedLog -Message "Disabling local user accounts" -Level "INFO"
-            Disable-LocalUserAccounts
-            Write-EnhancedLog -Message "Local user accounts disabled" -Level "INFO"
+            Write-EnhancedLog -Message "Disabling local user accounts in $Mode mode" -Level "INFO"
+            Disable-LocalUserAccounts -Mode $Mode
+            Write-EnhancedLog -Message "Local user accounts disabled in $Mode mode" -Level "INFO"
   
             # Set registry values
             Write-EnhancedLog -Message "Applying registry settings" -Level "INFO"
@@ -129,5 +137,4 @@ function Execute-MigrationCleanupTasks {
     End {
         Write-EnhancedLog -Message "Exiting Execute-MigrationCleanupTasks function" -Level "Notice"
     }
-  }
-  
+}

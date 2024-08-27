@@ -30,19 +30,8 @@ function PostRunOnce-Phase1EntraJoin {
     .PARAMETER RebootAfterInstallation
     A switch parameter that controls whether the computer should be restarted after the provisioning package installation. If not specified, the computer will be restarted by default.
 
-    .EXAMPLE
-    $params = @{
-        MigrationConfigPath = "C:\ProgramData\AADMigration\scripts\MigrationConfig.psd1"
-        ImagePath = "C:\ProgramData\AADMigration\Files\MigrationInProgress.bmp"
-        RunOnceScriptPath = "C:\ProgramData\AADMigration\Scripts\PostRunOnce2.ps1"
-        RunOnceKey = "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce"
-        PowershellPath = "C:\Windows\System32\WindowsPowerShell\v1.0\Powershell.exe"
-        ExecutionPolicy = "Unrestricted"
-        RunOnceName = "NextRun"
-        RebootAfterInstallation = $false
-    }
-    PostRunOnce-Phase1EntraJoin @params
-    Starts the migration process without restarting the computer after installation.
+    .PARAMETER Mode
+    Specifies the mode in which the script should run. Options are "Dev" for development mode or "Prod" for production mode. In Dev mode, certain features are skipped, while in Prod mode, all features are executed.
 
     .EXAMPLE
     $params = @{
@@ -53,9 +42,25 @@ function PostRunOnce-Phase1EntraJoin {
         PowershellPath = "C:\Windows\System32\WindowsPowerShell\v1.0\Powershell.exe"
         ExecutionPolicy = "Unrestricted"
         RunOnceName = "NextRun"
+        Mode = "Dev"
     }
     PostRunOnce-Phase1EntraJoin @params
-    Starts the migration process and restarts the computer after installation.
+    Runs the migration process in Dev mode, skipping user input blocking and reboots.
+
+    .EXAMPLE
+    $params = @{
+        MigrationConfigPath = "C:\ProgramData\AADMigration\scripts\MigrationConfig.psd1"
+        ImagePath = "C:\ProgramData\AADMigration\Files\MigrationInProgress.bmp"
+        RunOnceScriptPath = "C:\ProgramData\AADMigration\Scripts\PostRunOnce2.ps1"
+        RunOnceKey = "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce"
+        PowershellPath = "C:\Windows\System32\WindowsPowerShell\v1.0\Powershell.exe"
+        ExecutionPolicy = "Unrestricted"
+        RunOnceName = "NextRun"
+        RebootAfterInstallation = $true
+        Mode = "Prod"
+    }
+    PostRunOnce-Phase1EntraJoin @params
+    Runs the migration process in Prod mode, executing all features, including user input blocking and reboots.
     #>
 
     [CmdletBinding()]
@@ -82,11 +87,15 @@ function PostRunOnce-Phase1EntraJoin {
         [string]$RunOnceName,
 
         [Parameter(Mandatory = $false)]
-        [switch]$RebootAfterInstallation
+        [switch]$RebootAfterInstallation,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("Dev", "Prod")]
+        [string]$Mode
     )
 
     Begin {
-        Write-EnhancedLog -Message "Starting PostRunOnce-Phase1EntraJoin function" -Level "Notice"
+        Write-EnhancedLog -Message "Starting PostRunOnce-Phase1EntraJoin function in $Mode mode" -Level "Notice"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
@@ -99,23 +108,31 @@ function PostRunOnce-Phase1EntraJoin {
             $MigrationPath = $MigrationConfig.MigrationPath
             Write-EnhancedLog -Message "Loaded PPKGName: $PPKGName, MigrationPath: $MigrationPath" -Level "INFO"
 
-            $DBG
-
-            # Block user input
-            Write-EnhancedLog -Message "Blocking user input" -Level "INFO"
-            $blockParams = @{
-                Block = $true
+            # Block user input if in Prod mode
+            if ($Mode -eq "Prod") {
+                Write-EnhancedLog -Message "Blocking user input" -Level "INFO"
+                $blockParams = @{
+                    Block = $true
+                }
+                Block-UserInput @blockParams
+                Write-EnhancedLog -Message "User input blocked" -Level "INFO"
             }
-            Block-UserInput @blockParams
-            Write-EnhancedLog -Message "User input blocked" -Level "INFO"
+            else {
+                Write-EnhancedLog -Message "Skipping user input blocking in Dev mode" -Level "WARNING"
+            }
 
             # Show migration in progress form
-            Write-EnhancedLog -Message "Displaying migration in progress form with image $ImagePath" -Level "INFO"
-            $formParams = @{
-                ImagePath = $ImagePath
+            if ($Mode -eq "Prod") {
+                Write-EnhancedLog -Message "Displaying migration in progress form with image $ImagePath" -Level "INFO"
+                $formParams = @{
+                    ImagePath = $ImagePath
+                }
+                Show-MigrationInProgressForm @formParams
+                Write-EnhancedLog -Message "Migration in progress form displayed" -Level "INFO"
             }
-            Show-MigrationInProgressForm @formParams
-            Write-EnhancedLog -Message "Migration in progress form displayed" -Level "INFO"
+            else {
+                Write-EnhancedLog -Message "Skipping Displaying Migration in Progress form in Dev mode" -Level "WARNING"
+            }
 
             # Set RunOnce script
             Write-EnhancedLog -Message "Setting RunOnce script at $RunOnceKey with script $RunOnceScriptPath" -Level "INFO"
@@ -138,19 +155,22 @@ function PostRunOnce-Phase1EntraJoin {
             Install-PPKG @installParams
             Write-EnhancedLog -Message "Provisioning package installation command executed" -Level "INFO"
 
-            $DBG
-
-            # Unblock user input and close form
-            Write-EnhancedLog -Message "Unblocking user input and closing migration progress form" -Level "INFO"
-            Block-UserInput -Block $false
+            # Unblock user input and close form if in Prod mode
+            if ($Mode -eq "Prod") {
+                Write-EnhancedLog -Message "Unblocking user input and closing migration progress form" -Level "INFO"
+                Block-UserInput -Block $false
+            }
+            else {
+                Write-EnhancedLog -Message "Skipping unblocking of user input in Dev mode" -Level "WARNING"
+            }
 
             # Optionally reboot the machine
-            if ($RebootAfterInstallation) {
+            if ($RebootAfterInstallation -and $Mode -eq "Prod") {
                 Write-EnhancedLog -Message "Rebooting computer after successful migration" -Level "INFO"
                 Restart-Computer
             }
             else {
-                Write-EnhancedLog -Message "Skipping reboot as per user request" -Level "INFO"
+                Write-EnhancedLog -Message "Skipping reboot as per mode or user request" -Level "INFO"
             }
         }
         catch {

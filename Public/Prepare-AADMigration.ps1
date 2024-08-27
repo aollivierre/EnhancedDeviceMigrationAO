@@ -47,11 +47,11 @@ function Prepare-AADMigration {
             # Copy-FilesToPathWithKill -SourcePath $sourcePath1 -DestinationPath $destinationPath1
 
             # Ensure the destination directory exists
-            if (Test-Path -Path $MigrationPath) {
-                Write-EnhancedLog -Message "Destination directory already exists. Removing: $MigrationPath" -Level "WARNING"
-                Remove-Item -Path $MigrationPath -Recurse -Force
-                Write-EnhancedLog -Message "Destination directory removed: $MigrationPath" -Level "INFO"
-            }
+            # if (Test-Path -Path $MigrationPath) {
+            #     Write-EnhancedLog -Message "Destination directory already exists. Removing: $MigrationPath" -Level "WARNING"
+            #     Remove-Item -Path $MigrationPath -Recurse -Force
+            #     Write-EnhancedLog -Message "Destination directory removed: $MigrationPath" -Level "INFO"
+            # }
 
             # Create a new destination directory
             New-Item -Path $MigrationPath -ItemType Directory | Out-Null
@@ -184,8 +184,10 @@ function Prepare-AADMigration {
 
             # Example usage
             $params = @{
-                LogFolder      = "C:\ProgramData\AADMigration\logs"
+                LogFolder      = "logs"
                 StatusFileName = "ODSyncUtilStatus.json"
+                MaxRetries     = 5
+                RetryInterval  = 10
             }
             $result = Analyze-OneDriveSyncUtilStatus @params
 
@@ -234,13 +236,17 @@ function Prepare-AADMigration {
             # Call the function with splatting
             Trigger-ScheduledTask @taskParams
 
-            # # Example usage with splatting
+            # Define the parameters for splatting
             $AnalyzeParams = @{
-                LogFolder      = "C:\ProgramData\AADMigration\logs"
+                LogFolder      = "logs"
                 StatusFileName = "UserFilesBackupStatus.json"
+                MaxRetries     = 5
+                RetryInterval  = 10
             }
 
+            # Call the Analyze-CopyOperationStatus function using splatting
             Analyze-CopyOperationStatus @AnalyzeParams
+
         }
         catch {
             Write-EnhancedLog -Message "An error occurred in Prepare-AADMigration: $($_.Exception.Message)" -Level "ERROR"

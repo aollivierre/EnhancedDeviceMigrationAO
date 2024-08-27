@@ -5,67 +5,64 @@ function Analyze-CopyOperationStatus {
         [string]$LogFolder,
 
         [Parameter(Mandatory = $true, HelpMessage = "Provide the status file name.")]
-        [string]$StatusFileName
+        [string]$StatusFileName,
+
+        [Parameter(Mandatory = $true)]
+        [int]$MaxRetries = 5,
+
+        [Parameter(Mandatory = $true)]
+        [int]$RetryInterval = 10
     )
 
-    # Define the status file path
-    $statusFile = Join-Path -Path $LogFolder -ChildPath $StatusFileName
-
-    # Retry mechanism parameters
-    $maxRetries = 5
-    $retryInterval = 5
-    $retryCount = 0
-    $fileFound = $false
-
-    # Retry loop to check if the status file exists
-    while ($retryCount -lt $maxRetries -and -not $fileFound) {
-        if (Test-Path -Path $statusFile) {
-            $fileFound = $true
-            Write-EnhancedLog -Message "Status file found: $statusFile" -Level "INFO"
-        } else {
-            Write-EnhancedLog -Message "Status file not found: $statusFile. Retrying in $retryInterval seconds..." -Level "WARNING"
-            Start-Sleep -Seconds $retryInterval
-            $retryCount++
-        }
+    Begin {
+        Write-EnhancedLog -Message "Starting Analyze-CopyOperationStatus function" -Level "Notice"
+        Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
-    # If the file is still not found after retries, exit
-    if (-not $fileFound) {
-        Write-EnhancedLog -Message "Status file not found after $maxRetries retries: $statusFile" -Level "ERROR"
-        return
-    }
+    Process {
+        try {
+            # Step 1: Remove existing status files
+            Remove-ExistingStatusFiles -LogFolder $LogFolder -StatusFileName $StatusFileName
 
-    # Read the status file
-    $statusData = Get-Content -Path $statusFile | ConvertFrom-Json
+            # Step 2: Find the new status file
+            $statusFile = Find-NewStatusFile -LogFolder $LogFolder -StatusFileName $StatusFileName -MaxRetries $MaxRetries -RetryInterval $RetryInterval
 
-    # Analyze the status of each operation
-    foreach ($entry in $statusData) {
-        $sourcePath = $entry.SourcePath
-        $backupFolderName = $entry.BackupFolderName
-        $backupStatus = $entry.BackupStatus
-        $timestamp = $entry.Timestamp
+            # Step 3: Analyze the status file
+            Write-EnhancedLog -Message "Reading status file: $($statusFile.FullName)" -Level "INFO"
+            $statusData = Get-Content -Path $statusFile.FullName | ConvertFrom-Json
 
-        if ($backupStatus -eq "Success") {
-            Write-EnhancedLog -Message "Backup operation succeeded: Source: $sourcePath, Backup Folder: $backupFolderName, Timestamp: $timestamp" -Level "INFO"
-        }
-        elseif ($backupStatus -eq "Failed") {
-            Write-EnhancedLog -Message "Backup operation failed: Source: $sourcePath, Backup Folder: $backupFolderName, Timestamp: $timestamp" -Level "ERROR"
-            if ($entry.VerificationResults) {
-                foreach ($result in $entry.VerificationResults) {
-                    Write-EnhancedLog -Message "Discrepancy: Status: $($result.Status), Source Path: $($result.SourcePath), Expected/Actual Path: $($result.ExpectedPath -or $result.ActualPath)" -Level "WARNING"
+            # Analyze the status of each operation
+            Write-EnhancedLog -Message "Analyzing copy operation status from the JSON data" -Level "INFO"
+            foreach ($entry in $statusData) {
+                $sourcePath = $entry.SourcePath
+                $backupFolderName = $entry.BackupFolderName
+                $backupStatus = $entry.BackupStatus
+                $timestamp = $entry.Timestamp
+
+                if ($backupStatus -eq "Success") {
+                    Write-EnhancedLog -Message "Copy operation succeeded: Source: $sourcePath, Backup Folder: $backupFolderName, Timestamp: $timestamp" -Level "INFO"
+                }
+                elseif ($backupStatus -eq "Failed") {
+                    Write-EnhancedLog -Message "Copy operation failed: Source: $sourcePath, Backup Folder: $backupFolderName, Timestamp: $timestamp" -Level "ERROR"
+                    if ($entry.VerificationResults) {
+                        foreach ($result in $entry.VerificationResults) {
+                            Write-EnhancedLog -Message "Discrepancy: Status: $($result.Status), Source Path: $($result.SourcePath), Expected/Actual Path: $($result.ExpectedPath -or $result.ActualPath)" -Level "WARNING"
+                        }
+                    }
+                }
+                else {
+                    Write-EnhancedLog -Message "Unknown copy operation status for Source: $sourcePath, Backup Folder: $backupFolderName, Timestamp: $timestamp" -Level "WARNING"
                 }
             }
         }
-        else {
-            Write-EnhancedLog -Message "Unknown backup status for Source: $sourcePath, Backup Folder: $backupFolderName, Timestamp: $timestamp" -Level "WARNING"
+        catch {
+            Write-EnhancedLog -Message "An error occurred in Analyze-CopyOperationStatus function: $($_.Exception.Message)" -Level "ERROR"
+            Handle-Error -ErrorRecord $_
+            throw $_
         }
     }
+
+    End {
+        Write-EnhancedLog -Message "Exiting Analyze-CopyOperationStatus function" -Level "Notice"
+    }
 }
-
-# # Example usage with splatting
-# $AnalyzeParams = @{
-#     LogFolder = "C:\ProgramData\BackupLogs"
-#     StatusFileName = "UserFilesBackupStatus.json"
-# }
-
-# Analyze-CopyOperationStatus @AnalyzeParams

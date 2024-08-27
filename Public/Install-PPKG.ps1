@@ -41,7 +41,6 @@ function Install-PPKG {
 
     Process {
         try {
-            # $ppkgPath = Join-Path -Path $MigrationPath -ChildPath "Files\$PPKGName"
 
             if (-not (Test-Path -Path $PPKGName)) {
                 Throw "Provisioning package file not found: $PPKGName"
@@ -52,7 +51,7 @@ function Install-PPKG {
             $DBG
 
             $params = @{
-                PackagePath  = $ppkgPath
+                PackagePath  = $PPKGName
                 ForceInstall = $true
                 QuietInstall = $true
             }

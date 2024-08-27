@@ -61,12 +61,14 @@ function Check-ODSyncUtilStatus {
 
         # Define the log file path
         # Get the parent of the parent directory of ScriptPath
-        $parentOfParentPath = (Get-Item -Path $ScriptPath).Parent.Parent.FullName
+        # $parentOfParentPath = (Get-Item -Path $ScriptPath).Parent.Parent.FullName
 
-        # Define the log file path in the parent of the parent directory
-        $logFolder = Join-Path -Path $parentOfParentPath -ChildPath $LogFolderName
+        # Define the log folder path in the user's profile directory
+        $logFolder = Join-Path -Path $env:USERPROFILE -ChildPath $LogFolderName
 
+        # Define the status file path within the log folder
         $statusFile = Join-Path -Path $logFolder -ChildPath $StatusFileName
+
 
         # Ensure the log directory exists
         if (-not (Test-Path -Path $logFolder)) {

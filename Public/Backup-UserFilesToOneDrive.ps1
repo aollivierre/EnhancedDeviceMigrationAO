@@ -85,8 +85,9 @@ function Backup-UserFilesToOneDrive {
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
 
         # Define the log file path
-        $logFolder = Join-Path -Path (Get-Item -Path $Scriptbasepath).Parent.FullName -ChildPath "logs"
+        $logFolder = Join-Path -Path $env:USERPROFILE -ChildPath "logs"
         $statusFile = Join-Path -Path $logFolder -ChildPath "UserFilesBackupStatus.json"
+
 
         # Ensure the log directory exists
         if (-not (Test-Path -Path $logFolder)) {

@@ -4,20 +4,22 @@ function Analyze-OneDriveSyncUtilStatus {
     Analyzes the OneDrive sync status from a JSON file.
 
     .DESCRIPTION
-    The Analyze-OneDriveSyncUtilStatus function reads the OneDrive sync status from a specified JSON file, and categorizes the status as healthy, in progress, or failed based on predefined conditions.
+    The Analyze-OneDriveSyncUtilStatus function removes existing status files, finds the new status file, reads it, and categorizes the sync status as healthy, in progress, or failed based on predefined conditions.
 
     .PARAMETER LogFolder
-    The path to the folder where the log files are stored.
+    The path to the folder where the log files are stored. If running as SYSTEM, this will be ignored, and the function will analyze logs across all user profiles.
 
     .PARAMETER StatusFileName
     The name of the JSON file containing the OneDrive sync status.
 
+    .PARAMETER MaxRetries
+    The maximum number of retries to find the new status file.
+
+    .PARAMETER RetryInterval
+    The interval in seconds between retries.
+
     .EXAMPLE
-    $params = @{
-        LogFolder     = "C:\ProgramData\AADMigration\logs"
-        StatusFileName = "ODSyncUtilStatus.json"
-    }
-    $result = Analyze-OneDriveSyncUtilStatus @params
+    $result = Analyze-OneDriveSyncUtilStatus -LogFolder "C:\Users\YourUserProfile\Logs" -StatusFileName "ODSyncUtilStatus.json" -MaxRetries 5 -RetryInterval 10
     if ($result.Status -eq "Healthy") {
         # Do something if healthy
     }
@@ -30,53 +32,31 @@ function Analyze-OneDriveSyncUtilStatus {
         [string]$LogFolder,
 
         [Parameter(Mandatory = $true)]
-        [string]$StatusFileName
+        [string]$StatusFileName,
+
+        [Parameter(Mandatory = $true)]
+        [int]$MaxRetries = 5,
+
+        [Parameter(Mandatory = $true)]
+        [int]$RetryInterval = 10
     )
 
     Begin {
         Write-EnhancedLog -Message "Starting Analyze-OneDriveSyncUtilStatus function" -Level "Notice"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
-
-        # Define the status file path
-        $statusFile = Join-Path -Path $LogFolder -ChildPath $StatusFileName
-
-        # Remove the existing status file if found
-        if (Test-Path -Path $statusFile) {
-            Write-EnhancedLog -Message "Removing existing status file: $statusFile" -Level "INFO"
-            Remove-Item -Path $statusFile -Force
-        }
     }
 
     Process {
         try {
-            # Retry mechanism parameters
-            $maxRetries = 5
-            $retryInterval = 5
-            $retryCount = 0
-            $fileFound = $false
+            # Step 1: Remove existing status files
+            Remove-ExistingStatusFiles -LogFolder $LogFolder -StatusFileName $StatusFileName
 
-            # Retry loop to check if the status file exists
-            while ($retryCount -lt $maxRetries -and -not $fileFound) {
-                if (Test-Path -Path $statusFile) {
-                    $fileFound = $true
-                    Write-EnhancedLog -Message "Status file found: $statusFile" -Level "INFO"
-                } else {
-                    Write-EnhancedLog -Message "Status file not found: $statusFile. Retrying in $retryInterval seconds..." -Level "WARNING"
-                    Start-Sleep -Seconds $retryInterval
-                    $retryCount++
-                }
-            }
+            # Step 2: Find the new status file
+            $statusFile = Find-NewStatusFile -LogFolder $LogFolder -StatusFileName $StatusFileName -MaxRetries $MaxRetries -RetryInterval $RetryInterval
 
-            # If the file is still not found after retries, exit
-            if (-not $fileFound) {
-                $errorMessage = "Status file not found after $maxRetries retries: $statusFile"
-                Write-EnhancedLog -Message $errorMessage -Level "ERROR"
-                throw $errorMessage
-            }
-
-            # Read the status file
-            Write-EnhancedLog -Message "Reading status file: $statusFile" -Level "INFO"
-            $Status = Get-Content -Path $statusFile | ConvertFrom-Json
+            # Step 3: Analyze the new status file
+            Write-EnhancedLog -Message "Reading status file: $($statusFile.FullName)" -Level "INFO"
+            $Status = Get-Content -Path $statusFile.FullName | ConvertFrom-Json
 
             # Define the status categories
             Write-EnhancedLog -Message "Defining status categories for analysis" -Level "INFO"
@@ -129,20 +109,18 @@ function Analyze-OneDriveSyncUtilStatus {
     }
 }
 
-# # Example usage
-# $params = @{
-#     LogFolder     = "C:\ProgramData\AADMigration\logs"
-#     StatusFileName = "ODSyncUtilStatus.json"
-# }
-# $result = Analyze-OneDriveSyncUtilStatus @params
 
-# # Example decision-making based on the result
+
+# # Step 1: Remove existing status files
+# Remove-ExistingStatusFiles -LogFolder "C:\Users\YourUserProfile\Logs" -StatusFileName "ODSyncUtilStatus.json"
+
+# # Step 2: Find the new status file
+# $statusFile = Find-NewStatusFile -LogFolder "C:\Users\YourUserProfile\Logs" -StatusFileName "ODSyncUtilStatus.json" -MaxRetries 5 -RetryInterval 10
+
+# # Step 3: Analyze the new status file
+# $result = Analyze-OneDriveSyncUtilStatus -StatusFile $statusFile
+
+# # Check the result
 # if ($result.Status -eq "Healthy") {
-#     Write-Host "OneDrive is healthy, no further action required."
-# } elseif ($result.Status -eq "InProgress") {
-#     Write-Host "OneDrive is syncing, please wait..."
-# } elseif ($result.Status -eq "Failed") {
-#     Write-Host "OneDrive has encountered an error, please investigate."
-# } else {
-#     Write-Host "OneDrive status is unknown, further analysis required."
+#     # Do something if healthy
 # }

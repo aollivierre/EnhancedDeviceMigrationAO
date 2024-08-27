@@ -4,7 +4,7 @@ function PostRunOnce-Phase2EscrowBitlocker {
     Executes post-run operations for the second phase of the migration process.
 
     .DESCRIPTION
-    The PostRunOnce2 function blocks user input, displays a migration in progress form, creates a scheduled task for post-migration cleanup, escrows the BitLocker recovery key, sets various registry values, and optionally restarts the computer.
+    The PostRunOnce-Phase2EscrowBitlocker function blocks user input, displays a migration in progress form, creates a scheduled task for post-migration cleanup, escrows the BitLocker recovery key, sets various registry values, and optionally restarts the computer. The actions performed vary depending on the specified mode (Dev or Prod).
 
     .PARAMETER ImagePath
     The path to the image file to be displayed on the migration progress form.
@@ -26,6 +26,9 @@ function PostRunOnce-Phase2EscrowBitlocker {
 
     .PARAMETER RebootAfterCompletion
     A switch parameter that controls whether the computer should be restarted after completing all post-run operations. If not specified, the computer will be restarted by default.
+
+    .PARAMETER Mode
+    Specifies the mode in which the script should run. Options are "Dev" for development mode or "Prod" for production mode. In Dev mode, certain features are skipped, while in Prod mode, all features are executed.
 
     .EXAMPLE
     $params = @{
@@ -57,9 +60,44 @@ function PostRunOnce-Phase2EscrowBitlocker {
             }
         }
         RebootAfterCompletion = $false
+        Mode = "Dev"
     }
-    PostRunOnce2 @params
-    Executes the post-run operations without restarting the computer after completion.
+    PostRunOnce-Phase2EscrowBitlocker @params
+    Executes the post-run operations in Dev mode, skipping user input blocking and reboots.
+
+    .EXAMPLE
+    $params = @{
+        ImagePath = "C:\ProgramData\AADMigration\Files\MigrationInProgress.bmp"
+        TaskPath = "AAD Migration"
+        TaskName = "Run Post-migration cleanup"
+        ScriptPath = "C:\ProgramData\AADMigration\Scripts\PostRunOnce3.ps1"
+        BitlockerDrives = @("C:", "D:")
+        RegistrySettings = @{
+            "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" = @{
+                "AutoAdminLogon" = @{
+                    "Type" = "DWORD"
+                    "Data" = "0"
+                }
+            }
+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" = @{
+                "dontdisplaylastusername" = @{
+                    "Type" = "DWORD"
+                    "Data" = "1"
+                }
+                "legalnoticecaption" = @{
+                    "Type" = "String"
+                    "Data" = "Migration Completed"
+                }
+                "legalnoticetext" = @{
+                    "Type" = "String"
+                    "Data" = "This PC has been migrated to Azure Active Directory. Please log in to Windows using your email address and password."
+                }
+            }
+        }
+        Mode = "Prod"
+    }
+    PostRunOnce-Phase2EscrowBitlocker @params
+    Executes the post-run operations in Prod mode, including user input blocking and reboots.
     #>
 
     [CmdletBinding()]
@@ -83,31 +121,47 @@ function PostRunOnce-Phase2EscrowBitlocker {
         [hashtable]$RegistrySettings,
 
         [Parameter(Mandatory = $false)]
-        [switch]$RebootAfterCompletion = $true
+        [switch]$RebootAfterCompletion,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("Dev", "Prod")]
+        [string]$Mode = "Prod"
     )
 
     Begin {
-        Write-EnhancedLog -Message "Starting PostRunOnce2 function" -Level "Notice"
+        Write-EnhancedLog -Message "Starting PostRunOnce-Phase2EscrowBitlocker function in $Mode mode" -Level "Notice"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
     Process {
         try {
-            # Block user input
-            Write-EnhancedLog -Message "Blocking user input" -Level "INFO"
-            $blockParams = @{
-                Block = $true
+            # Block user input if in Prod mode
+            if ($Mode -eq "Prod") {
+                Write-EnhancedLog -Message "Blocking user input" -Level "INFO"
+                $blockParams = @{
+                    Block = $true
+                }
+                Block-UserInput @blockParams
+                Write-EnhancedLog -Message "User input blocked" -Level "INFO"
             }
-            Block-UserInput @blockParams
-            Write-EnhancedLog -Message "User input blocked" -Level "INFO"
+            else {
+                Write-EnhancedLog -Message "Skipping user input blocking in Dev mode" -Level "WARNING"
+            }
 
+        
             # Show migration in progress form
-            Write-EnhancedLog -Message "Displaying migration in progress form with image $ImagePath" -Level "INFO"
-            $formParams = @{
-                ImagePath = $ImagePath
+            if ($Mode -eq "Prod") {
+                Write-EnhancedLog -Message "Displaying migration in progress form with image $ImagePath" -Level "INFO"
+                $formParams = @{
+                    ImagePath = $ImagePath
+                }
+                Show-MigrationInProgressForm @formParams
+                Write-EnhancedLog -Message "Migration in progress form displayed" -Level "INFO"
             }
-            Show-MigrationInProgressForm @formParams
-            Write-EnhancedLog -Message "Migration in progress form displayed" -Level "INFO"
+            else {
+                Write-EnhancedLog -Message "Skipping Displaying Migration in Progress form in Dev mode" -Level "WARNING"
+            }
+
 
             # Create scheduled task for post-migration cleanup
             Write-EnhancedLog -Message "Creating scheduled task $TaskName at $TaskPath" -Level "INFO"
@@ -147,26 +201,31 @@ function PostRunOnce-Phase2EscrowBitlocker {
                 }
             }
 
-            # Unblock user input and close form
-            Write-EnhancedLog -Message "Unblocking user input and closing migration progress form" -Level "INFO"
-            Block-UserInput -Block $false
+            # Unblock user input and close form if in Prod mode
+            if ($Mode -eq "Prod") {
+                Write-EnhancedLog -Message "Unblocking user input and closing migration progress form" -Level "INFO"
+                Block-UserInput -Block $false
+            }
+            else {
+                Write-EnhancedLog -Message "Skipping unblocking of user input in Dev mode" -Level "WARNING"
+            }
 
             # Optionally reboot the machine
-            if ($RebootAfterCompletion) {
+            if ($RebootAfterCompletion -and $Mode -eq "Prod") {
                 Write-EnhancedLog -Message "Rebooting computer after successful completion" -Level "INFO"
                 Restart-Computer
             }
             else {
-                Write-EnhancedLog -Message "Skipping reboot as per user request" -Level "INFO"
+                Write-EnhancedLog -Message "Skipping reboot as per mode or user request" -Level "INFO"
             }
         }
         catch {
-            Write-EnhancedLog -Message "An error occurred in PostRunOnce2 function: $($_.Exception.Message)" -Level "ERROR"
+            Write-EnhancedLog -Message "An error occurred in PostRunOnce-Phase2EscrowBitlocker function: $($_.Exception.Message)" -Level "ERROR"
             Handle-Error -ErrorRecord $_
         }
     }
 
     End {
-        Write-EnhancedLog -Message "Exiting PostRunOnce2 function" -Level "Notice"
+        Write-EnhancedLog -Message "Exiting PostRunOnce-Phase2EscrowBitlocker function" -Level "Notice"
     }
 }
