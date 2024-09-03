@@ -15,9 +15,6 @@ function PostRunOnce-Phase2EscrowBitlocker {
     .PARAMETER TaskName
     The name of the scheduled task.
 
-    .PARAMETER ScriptPath
-    The path to the PowerShell script to be executed by the scheduled task.
-
     .PARAMETER BitlockerDrives
     An array of drive letters for the BitLocker protected drives. The BitLocker recovery key for each drive will be escrowed as part of the process.
 
@@ -112,9 +109,6 @@ function PostRunOnce-Phase2EscrowBitlocker {
         [string]$TaskName,
 
         [Parameter(Mandatory = $true)]
-        [string]$ScriptPath,
-
-        [Parameter(Mandatory = $true)]
         [string[]]$BitlockerDrives,
 
         [Parameter(Mandatory = $true)]
@@ -165,12 +159,25 @@ function PostRunOnce-Phase2EscrowBitlocker {
 
             # Create scheduled task for post-migration cleanup
             Write-EnhancedLog -Message "Creating scheduled task $TaskName at $TaskPath" -Level "INFO"
+
+            # Define the parameters to be splatted
             $CreatePostMigrationCleanupTaskParams = @{
-                TaskPath   = $TaskPath
-                TaskName   = $TaskName
-                ScriptPath = $ScriptPath
+                TaskPath            = "AAD Migration"
+                TaskName            = "Run Post migration cleanup"
+                ScriptDirectory     = "C:\ProgramData\AADMigration\Scripts"
+                ScriptName          = "ExecuteMigrationCleanupTasks.ps1"
+                TaskArguments       = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"{ScriptPath}`""
+                TaskPrincipalUserId = "NT AUTHORITY\SYSTEM"
+                TaskRunLevel        = "Highest"
+                PowerShellPath      = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+                TaskDescription     = "Run post AAD Migration cleanup"
+                TaskTriggerType     = "AtLogOn"  # Trigger type as a parameter
+                Delay               = "PT1M"  # Optional delay before starting, set to 1 minute
             }
+
+            # Call the function with the splatted parameters
             Create-PostMigrationCleanupTask @CreatePostMigrationCleanupTaskParams
+
             Write-EnhancedLog -Message "Scheduled task $TaskName created" -Level "INFO"
 
             $DBG

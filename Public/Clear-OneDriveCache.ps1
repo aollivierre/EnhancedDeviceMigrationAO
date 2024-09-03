@@ -21,15 +21,17 @@ function Clear-OneDriveCache {
   
     Process {
         try {
-            Write-EnhancedLog -Message "Restarting OneDrive process to clear cache" -Level "INFO"
-            $oneDrivePath = "C:\Program Files (x86)\Microsoft OneDrive\OneDrive.exe"
-            if (Test-Path -Path $oneDrivePath) {
+            Write-EnhancedLog -Message "Searching for OneDrive executable path" -Level "INFO"
+            $oneDrivePath = Find-OneDrivePath
+
+            if ($oneDrivePath) {
+                Write-EnhancedLog -Message "Restarting OneDrive process to clear cache" -Level "INFO"
                 Stop-Process -Name "OneDrive" -Force -ErrorAction SilentlyContinue
                 Start-Process -FilePath $oneDrivePath -ErrorAction Stop
                 Write-EnhancedLog -Message "Successfully restarted OneDrive process" -Level "INFO"
             }
             else {
-                Write-EnhancedLog -Message "OneDrive executable not found at path: $oneDrivePath" -Level "WARNING"
+                Write-EnhancedLog -Message "OneDrive executable not found in any known locations" -Level "WARNING"
             }
         }
         catch {
@@ -42,7 +44,7 @@ function Clear-OneDriveCache {
     End {
         Write-EnhancedLog -Message "Exiting Clear-OneDriveCache function" -Level "Notice"
     }
-  }
-  
-  # Example usage
-  # Clear-OneDriveCache
+}
+
+# Example usage
+# Clear-OneDriveCache

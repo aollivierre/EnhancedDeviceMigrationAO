@@ -1,4 +1,4 @@
-function Create-OneDriveSyncStatusTask {
+function Create-OneDriveCacheClearTask {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
@@ -20,28 +20,18 @@ function Create-OneDriveSyncStatusTask {
         [Parameter(Mandatory = $true)]
         [string]$PowerShellPath,
         [Parameter(Mandatory = $true)]
-        [string]$TaskDescription
+        [string]$TaskDescription,
+        [Parameter(Mandatory = $true)]
+        [switch]$AtLogOn
     )
 
     Begin {
-        Write-EnhancedLog -Message "Starting Create-OneDriveSyncStatusTask function" -Level "Notice"
-        Log-Params -Params @{
-            TaskPath               = $TaskPath
-            TaskName               = $TaskName
-            ScriptDirectory        = $ScriptDirectory
-            ScriptName             = $ScriptName
-            TaskArguments          = $TaskArguments
-            TaskRepetitionDuration = $TaskRepetitionDuration
-            TaskRepetitionInterval = $TaskRepetitionInterval
-            TaskPrincipalGroupId   = $TaskPrincipalGroupId
-            PowerShellPath         = $PowerShellPath
-            TaskDescription        = $TaskDescription
-        }
+        Write-EnhancedLog -Message "Starting Create-OneDriveCacheClearTask function" -Level "Notice"
+        Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
     Process {
         try {
-
             # Unregister the task if it exists
             Unregister-ScheduledTaskWithLogging -TaskName $TaskName
 
@@ -54,8 +44,9 @@ function Create-OneDriveSyncStatusTask {
             $action = New-ScheduledTaskAction @actionParams
 
             $triggerParams = @{
-                AtLogOn = $true
+                AtLogOn = $AtLogOn
             }
+            
             $trigger = New-ScheduledTaskTrigger @triggerParams
 
             $principalParams = @{
@@ -78,28 +69,29 @@ function Create-OneDriveSyncStatusTask {
             $Task | Set-ScheduledTask
         }
         catch {
-            Write-EnhancedLog -Message "An error occurred while creating the OneDrive sync status task: $($_.Exception.Message)" -Level "ERROR"
+            Write-EnhancedLog -Message "An error occurred while creating the OneDrive cache clear task: $($_.Exception.Message)" -Level "ERROR"
             Handle-Error -ErrorRecord $_
         }
     }
 
     End {
-        Write-EnhancedLog -Message "Exiting Create-OneDriveSyncStatusTask function" -Level "Notice"
+        Write-EnhancedLog -Message "Exiting Create-OneDriveCacheClearTask function" -Level "Notice"
     }
 }
 
 # # Example usage with splatting
-# $CreateOneDriveSyncStatusTaskParams = @{
-#     TaskPath                = "AAD Migration"
-#     TaskName                = "AADM Get OneDrive Sync Status"
-#     ScriptDirectory         = "C:\ProgramData\AADMigration\Scripts"
-#     ScriptName              = "Check-OneDriveSyncStatus.ps1"
-#     TaskArguments           = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
-#     TaskRepetitionDuration  = "P1D"
-#     TaskRepetitionInterval  = "PT30M"
-#     TaskPrincipalGroupId    = "BUILTIN\Users"
-#     PowerShellPath          = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-#     TaskDescription         = "Get current OneDrive Sync Status and write to event log"
+# $CreateOneDriveCacheClearTaskParams = @{
+#     TaskPath               = "OneDriveTasks"
+#     TaskName               = "Clear OneDrive Cache"
+#     ScriptDirectory        = "C:\Scripts"
+#     ScriptName             = "Clear-OneDriveCache.ps1"
+#     TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
+#     TaskRepetitionDuration = "P1D"
+#     TaskRepetitionInterval = "PT30M"
+#     TaskPrincipalGroupId   = "BUILTIN\Users"
+#     PowerShellPath         = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+#     TaskDescription        = "Clears the OneDrive cache by restarting the OneDrive process"
+#     AtLogOn                = $true
 # }
 
-# Create-OneDriveSyncStatusTask @CreateOneDriveSyncStatusTaskParams
+# Create-OneDriveCacheClearTask @CreateOneDriveCacheClearTaskParams

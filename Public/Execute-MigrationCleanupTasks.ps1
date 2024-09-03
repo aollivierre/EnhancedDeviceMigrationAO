@@ -85,36 +85,96 @@ function Execute-MigrationCleanupTasks {
             Remove-LocalUserAccount @removeUserParams
             Write-EnhancedLog -Message "Temporary user account $TempUser removed" -Level "INFO"
   
-            # Disable local user accounts
-            Write-EnhancedLog -Message "Disabling local user accounts in $Mode mode" -Level "INFO"
-            Disable-LocalUserAccounts -Mode $Mode
-            Write-EnhancedLog -Message "Local user accounts disabled in $Mode mode" -Level "INFO"
+            Manage-LocalUserAccounts -Mode $Mode
   
             # Set registry values
             Write-EnhancedLog -Message "Applying registry settings" -Level "INFO"
             foreach ($regPath in $RegistrySettings.Keys) {
                 foreach ($regName in $RegistrySettings[$regPath].Keys) {
                     $regSetting = $RegistrySettings[$regPath][$regName]
-                    Write-EnhancedLog -Message "Setting registry value $regName at $regPath" -Level "INFO"
-                    $regParams = @{
-                        RegKeyPath = $regPath
-                        RegValName = $regName
-                        RegValType = $regSetting["Type"]
-                        RegValData = $regSetting["Data"]
+
+                    if ($null -ne $regSetting["Data"]) {
+                        Write-EnhancedLog -Message "Setting registry value $regName at $regPath" -Level "INFO"
+                    
+                        $regParams = @{
+                            RegKeyPath = $regPath
+                            RegValName = $regName
+                            RegValType = $regSetting["Type"]
+                            RegValData = $regSetting["Data"]
+                        }
+                    
+                        # If the data is an empty string, explicitly set it as such
+                        if ($regSetting["Data"] -eq "") {
+                            $regParams.RegValData = ""
+                        }
+                    
+                        Set-RegistryValue @regParams
+                        Write-EnhancedLog -Message "Registry value $regName at $regPath set" -Level "INFO"
                     }
-                    Set-RegistryValue @regParams
-                    Write-EnhancedLog -Message "Registry value $regName at $regPath set" -Level "INFO"
+                    else {
+                        Write-EnhancedLog -Message "Skipping registry value $regName at $regPath due to null data" -Level "WARNING"
+                    }
+                    
                 }
             }
   
             # Remove scheduled tasks
             Write-EnhancedLog -Message "Removing scheduled tasks in TaskPath: AAD Migration" -Level "INFO"
-            $taskParams = @{
-                TaskPath = "AAD Migration"
+            # $taskParams = @{
+            #     TaskPath = "AAD Migration"
+            # }
+            # Remove-ScheduledTasks @taskParams
+
+            # $taskParams = @{
+            #     TaskPath = "AAD Migration"
+            # }
+            # Unregister-ScheduledTaskWithLogging @taskParams
+
+            # Unregister-ScheduledTaskWithLogging -TaskName $TaskName
+
+
+            # Retrieve all tasks in the "AAD Migration" path
+            $tasks = Get-ScheduledTask -TaskPath "\AAD Migration\" -ErrorAction SilentlyContinue
+
+            # Loop through each task and unregister it using the Unregister-ScheduledTaskWithLogging function
+            foreach ($task in $tasks) {
+                Unregister-ScheduledTaskWithLogging -TaskName $task.TaskName
             }
-            Remove-ScheduledTasks @taskParams
+
             Write-EnhancedLog -Message "Scheduled tasks removed from TaskPath: AAD Migration" -Level "INFO"
   
+        
+  
+            # Clear OneDrive cache
+            Write-EnhancedLog -Message "Clearing OneDrive cache" -Level "INFO"
+            # Clear-OneDriveCache
+
+            $CreateOneDriveCacheClearTaskParams = @{
+                TaskPath               = "AAD Migration"
+                TaskName               = "Clear OneDrive Cache"
+                ScriptDirectory        = "C:\ProgramData\AADMigration\Scripts"
+                ScriptName             = "ClearOneDriveCache.ps1"
+                TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
+                TaskRepetitionDuration = "P1D"
+                TaskRepetitionInterval = "PT30M"
+                TaskPrincipalGroupId   = "BUILTIN\Users"
+                PowerShellPath         = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+                TaskDescription        = "Clears the OneDrive cache by restarting the OneDrive process"
+                AtLogOn                = $true
+            }
+
+            Create-OneDriveCacheClearTask @CreateOneDriveCacheClearTaskParams
+
+
+            $taskParams = @{
+                TaskPath = "\AAD Migration"
+                TaskName = "Clear OneDrive Cache"
+            }
+
+            # Trigger OneDrive Sync Status Scheduled Task
+            Trigger-ScheduledTask @taskParams
+
+
             # Remove migration files
             Write-EnhancedLog -Message "Removing migration directories: $MigrationDirectories" -Level "INFO"
             $removeFilesParams = @{
@@ -122,10 +182,8 @@ function Execute-MigrationCleanupTasks {
             }
             Remove-MigrationFiles @removeFilesParams
             Write-EnhancedLog -Message "Migration directories removed: $MigrationDirectories" -Level "INFO"
-  
-            # Clear OneDrive cache
-            Write-EnhancedLog -Message "Clearing OneDrive cache" -Level "INFO"
-            Clear-OneDriveCache
+
+
             Write-EnhancedLog -Message "OneDrive cache cleared" -Level "INFO"
         }
         catch {

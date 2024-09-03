@@ -1,4 +1,3 @@
-
 function Remove-MigrationFiles {
     <#
     .SYNOPSIS
@@ -25,6 +24,7 @@ function Remove-MigrationFiles {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$Directories
     )
   
@@ -38,7 +38,13 @@ function Remove-MigrationFiles {
             foreach ($directory in $Directories) {
                 if (Test-Path -Path $directory) {
                     Write-EnhancedLog -Message "Removing directory: $directory" -Level "INFO"
-                    Remove-Item -Path $directory -Recurse -Force -ErrorAction Stop
+                    $removeParams = @{
+                        Path               = $directory
+                        ForceKillProcesses = $true
+                        MaxRetries         = 5
+                        RetryInterval      = 10
+                    }
+                    Remove-EnhancedItem @removeParams
                     Write-EnhancedLog -Message "Successfully removed directory: $directory" -Level "INFO"
                 }
                 else {
@@ -56,14 +62,15 @@ function Remove-MigrationFiles {
     End {
         Write-EnhancedLog -Message "Exiting Remove-MigrationFiles function" -Level "Notice"
     }
-  }
-  
-  # # Example usage
-  # $params = @{
-  #   Directories = @(
-  #       "C:\ProgramData\AADMigration\Files",
-  #       "C:\ProgramData\AADMigration\Scripts",
-  #       "C:\ProgramData\AADMigration\Toolkit"
-  #   )
-  # }
-  # Remove-MigrationFiles @params
+}
+
+
+# Example usage
+# $params = @{
+#     Directories = @(
+#         "C:\ProgramData\AADMigration\Files",
+#         "C:\ProgramData\AADMigration\Scripts",
+#         "C:\ProgramData\AADMigration\Toolkit"
+#     )
+# }
+# Remove-MigrationFiles @params
