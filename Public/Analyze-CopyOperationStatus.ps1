@@ -21,8 +21,8 @@ function Analyze-CopyOperationStatus {
 
     Process {
         try {
-            # Step 1: Remove existing status files
-            Remove-ExistingStatusFiles -LogFolder $LogFolder -StatusFileName $StatusFileName
+            # # Step 1: Remove existing status files
+            # Remove-ExistingStatusFiles -LogFolder $LogFolder -StatusFileName $StatusFileName
 
             # Step 2: Find the new status file
             $statusFile = Find-NewStatusFile -LogFolder $LogFolder -StatusFileName $StatusFileName -MaxRetries $MaxRetries -RetryInterval $RetryInterval

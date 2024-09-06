@@ -47,6 +47,7 @@ function Remove-ExistingStatusFiles {
             }
         }
         else {
+            #Not Running as SYSTEM but running As User so we will scan the current user profile instead of all user profiles
             $logFolder = Join-Path -Path $env:USERPROFILE -ChildPath $LogFolder
             $statusFile = Join-Path -Path $logFolder -ChildPath $StatusFileName
 

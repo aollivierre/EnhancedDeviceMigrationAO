@@ -104,9 +104,9 @@ function PostRunOnce-Phase1EntraJoin {
             # Load the migration configuration
             Write-EnhancedLog -Message "Loading migration configuration from $MigrationConfigPath" -Level "INFO"
             $MigrationConfig = Import-PowerShellDataFile -Path $MigrationConfigPath
-            $PPKGName = $MigrationConfig.ProvisioningPack
+            $PPKGPath = $MigrationConfig.ProvisioningPack
             $MigrationPath = $MigrationConfig.MigrationPath
-            Write-EnhancedLog -Message "Loaded PPKGName: $PPKGName, MigrationPath: $MigrationPath" -Level "INFO"
+            Write-EnhancedLog -Message "Loaded PPKGPath: $PPKGPath, MigrationPath: $MigrationPath" -Level "INFO"
 
             # Block user input if in Prod mode
             if ($Mode -eq "Prod") {
@@ -147,10 +147,10 @@ function PostRunOnce-Phase1EntraJoin {
             Write-EnhancedLog -Message "RunOnce script set" -Level "INFO"
 
             # Install provisioning package
-            Write-EnhancedLog -Message "Installing provisioning package $PPKGName from $MigrationPath" -Level "INFO"
+            Write-EnhancedLog -Message "Installing provisioning package $PPKGPath from $MigrationPath" -Level "INFO"
             $installParams = @{
-                PPKGName      = $PPKGName
-                MigrationPath = $MigrationPath
+                PPKGPath      = $PPKGPath
+                # MigrationPath = $MigrationPath
             }
             Install-PPKG @installParams
             Write-EnhancedLog -Message "Provisioning package installation command executed" -Level "INFO"

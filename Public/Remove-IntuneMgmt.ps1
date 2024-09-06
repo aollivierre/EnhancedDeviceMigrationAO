@@ -40,64 +40,85 @@ function Remove-IntuneMgmt {
 
     Begin {
         Write-EnhancedLog -Message "Starting Remove-IntuneMgmt function" -Level "INFO"
-        Log-Params -Params @{
-            OMADMPath              = $OMADMPath
-            EnrollmentBasePath     = $EnrollmentBasePath
-            TrackedBasePath        = $TrackedBasePath
-            PolicyManagerBasePath  = $PolicyManagerBasePath
-            ProvisioningBasePath   = $ProvisioningBasePath
-            CertCurrentUserPath    = $CertCurrentUserPath
-            CertLocalMachinePath   = $CertLocalMachinePath
-            TaskPathBase           = $TaskPathBase
-            MSDMProviderID         = $MSDMProviderID
-            RegistryPathsToRemove  = $RegistryPathsToRemove
-            UserCertIssuer         = $UserCertIssuer
-            DeviceCertIssuers      = $DeviceCertIssuers
-        }
+        Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
     Process {
         try {
-            Write-EnhancedLog -Message "Checking Intune enrollment status" -Level "INFO"
+            Write-EnhancedLog -Message "Starting the Intune unenrollment process" -Level "NOTICE"
+    
+            # Check Intune enrollment status
+            Write-EnhancedLog -Message "Checking Intune enrollment status from registry path $OMADMPath" -Level "INFO"
             $Account = (Get-ItemProperty -Path $OMADMPath -ErrorAction SilentlyContinue).PSChildName
-
+            if ($null -eq $Account) {
+                Write-EnhancedLog -Message "No Intune enrollment account found at path $OMADMPath" -Level "WARNING"
+                return
+            }
+    
+            Write-EnhancedLog -Message "Enrollment account detected: $Account" -Level "INFO"
             $Enrolled = $true
             $EnrollmentPath = "$EnrollmentBasePath\$Account"
+            
+            Write-EnhancedLog -Message "Checking UPN and ProviderID at enrollment path: $EnrollmentPath" -Level "INFO"
             $EnrollmentUPN = (Get-ItemProperty -Path $EnrollmentPath -ErrorAction SilentlyContinue).UPN
             $ProviderID = (Get-ItemProperty -Path $EnrollmentPath -ErrorAction SilentlyContinue).ProviderID
-
-            if (-not $EnrollmentUPN -or $ProviderID -ne $MSDMProviderID) {
+    
+            if (-not $EnrollmentUPN) {
+                Write-EnhancedLog -Message "Enrollment UPN not found at $EnrollmentPath" -Level "WARNING"
                 $Enrolled = $false
             }
-
+    
+            if ($ProviderID -ne $MSDMProviderID) {
+                Write-EnhancedLog -Message "ProviderID does not match the expected value at $EnrollmentPath" -Level "WARNING"
+                $Enrolled = $false
+            }
+    
             if ($Enrolled) {
                 Write-EnhancedLog -Message "Device is enrolled in Intune. Proceeding with unenrollment." -Level "INFO"
-
-                # Delete Task Schedule tasks
+    
+                # Remove Scheduled Tasks
+                Write-EnhancedLog -Message "Attempting to remove scheduled tasks at path $TaskPathBase\$Account" -Level "INFO"
                 Get-ScheduledTask -TaskPath "$TaskPathBase\$Account\*" | Unregister-ScheduledTask -Confirm:$false -ErrorAction SilentlyContinue
-
-                # Delete registry keys
+                Write-EnhancedLog -Message "Scheduled tasks removed successfully (if any existed)" -Level "INFO"
+    
+                # Remove registry keys
+                Write-EnhancedLog -Message "Attempting to remove registry keys associated with enrollment" -Level "INFO"
                 foreach ($RegistryPath in $RegistryPathsToRemove) {
+                    Write-EnhancedLog -Message "Removing registry path: $RegistryPath\$Account" -Level "INFO"
                     Remove-Item -Path "$RegistryPath\$Account" -Recurse -Force -ErrorAction SilentlyContinue
                 }
-
-                # Delete enrollment certificates
+                Write-EnhancedLog -Message "Registry keys removed successfully (if any existed)" -Level "INFO"
+    
+                # Remove enrollment certificates from user store
+                Write-EnhancedLog -Message "Attempting to remove user certificates with issuer: $UserCertIssuer" -Level "INFO"
                 $UserCerts = Get-ChildItem -Path $CertCurrentUserPath -Recurse
                 $IntuneCerts = $UserCerts | Where-Object { $_.Issuer -eq $UserCertIssuer }
                 foreach ($Cert in $IntuneCerts) {
+                    Write-EnhancedLog -Message "Removing certificate: $($Cert.Subject)" -Level "INFO"
                     $Cert | Remove-Item -Force
                 }
+                Write-EnhancedLog -Message "User certificates removed successfully" -Level "INFO"
+    
+                # Remove enrollment certificates from local machine store
+                Write-EnhancedLog -Message "Attempting to remove device certificates with issuers: $DeviceCertIssuers" -Level "INFO"
                 $DeviceCerts = Get-ChildItem -Path $CertLocalMachinePath -Recurse
                 $IntuneCerts = $DeviceCerts | Where-Object { $DeviceCertIssuers -contains $_.Issuer }
                 foreach ($Cert in $IntuneCerts) {
+                    Write-EnhancedLog -Message "Removing device certificate: $($Cert.Subject)" -Level "INFO"
                     $Cert | Remove-Item -Force -ErrorAction SilentlyContinue
                 }
+                Write-EnhancedLog -Message "Device certificates removed successfully" -Level "INFO"
             }
-        } catch {
+            else {
+                Write-EnhancedLog -Message "Device is not enrolled in Intune. No further action required." -Level "INFO"
+            }
+        }
+        catch {
             Write-EnhancedLog -Message "An error occurred while removing Intune management: $($_.Exception.Message)" -Level "ERROR"
             Handle-Error -ErrorRecord $_
         }
     }
+    
 
     End {
         Write-EnhancedLog -Message "Exiting Remove-IntuneMgmt function" -Level "INFO"

@@ -162,7 +162,7 @@ function Prepare-AADMigration {
                 TaskPath               = "AAD Migration"
                 TaskName               = "AADM Get OneDrive Sync Util Status"
                 ScriptDirectory        = "C:\ProgramData\AADMigration\Scripts"
-                ScriptName             = "Check-ODSyncUtilStatus.ps1"
+                ScriptName             = "Check-ODSyncUtilStatus.Task.ps1"
                 TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
                 TaskRepetitionDuration = "P1D"
                 TaskRepetitionInterval = "PT30M"
@@ -174,6 +174,16 @@ function Prepare-AADMigration {
 
             Create-OneDriveSyncUtilStatusTask @CreateOneDriveSyncUtilStatusTask
 
+
+            $RemoveExistingStatusFilesParams = @{
+                LogFolder      = "logs"
+                StatusFileName = "ODSyncUtilStatus.json"
+        
+            }
+            # Remove existing status files
+            Remove-ExistingStatusFiles @RemoveExistingStatusFilesParams
+
+
             $taskParams = @{
                 TaskPath = "\AAD Migration"
                 TaskName = "AADM Get OneDrive Sync Util Status"
@@ -182,27 +192,38 @@ function Prepare-AADMigration {
             # Trigger OneDrive Sync Status Scheduled Task
             Trigger-ScheduledTask @taskParams
 
-            # Example usage
-            $params = @{
+            # Example usage with try-catch mechanism and Write-EnhancedLog
+            $AnalyzeOneDriveSyncUtilStatusParams = @{
                 LogFolder      = "logs"
                 StatusFileName = "ODSyncUtilStatus.json"
                 MaxRetries     = 5
                 RetryInterval  = 10
             }
-            $result = Analyze-OneDriveSyncUtilStatus @params
 
-            # Example decision-making based on the result
-            if ($result.Status -eq "Healthy") {
-                Write-Host "OneDrive is healthy, no further action required."
+            try {
+                $result = Analyze-OneDriveSyncUtilStatus @AnalyzeOneDriveSyncUtilStatusParams
+
+                # Example decision-making based on the result
+                if ($result.Status -eq "Healthy") {
+                    Write-EnhancedLog -Message "OneDrive is healthy, no further action required." -Level "INFO"
+                }
+                elseif ($result.Status -eq "InProgress") {
+                    Write-EnhancedLog -Message "OneDrive is syncing, please wait..." -Level "INFO"
+                }
+                elseif ($result.Status -eq "Failed") {
+                    Write-EnhancedLog -Message "OneDrive has encountered an error, please investigate." -Level "WARNING"
+                }
+                else {
+                    Write-EnhancedLog -Message "OneDrive status is unknown, further analysis required." -Level "NOTICE"
+                }
             }
-            elseif ($result.Status -eq "InProgress") {
-                Write-Host "OneDrive is syncing, please wait..."
-            }
-            elseif ($result.Status -eq "Failed") {
-                Write-Host "OneDrive has encountered an error, please investigate."
-            }
-            else {
-                Write-Host "OneDrive status is unknown, further analysis required."
+            catch {
+                Write-EnhancedLog -Message "An error occurred while analyzing OneDrive status: $($_.Exception.Message)" -Level "ERROR"
+                Write-EnhancedLog -Message "Please check if you are logged in to OneDrive and try again." -Level "ERROR"
+                Handle-Error -ErrorRecord $_
+    
+                # Throw to halt the entire script
+                throw $_
             }
 
 
@@ -216,7 +237,7 @@ function Prepare-AADMigration {
                 TaskPath               = "AAD Migration"
                 TaskName               = "User File Backup to OneDrive"
                 ScriptDirectory        = "C:\ProgramData\AADMigration\Scripts"
-                ScriptName             = "BackupUserFiles.ps1"
+                ScriptName             = "BackupUserFiles.Task.ps1"
                 TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
                 TaskRepetitionDuration = "P1D"
                 TaskRepetitionInterval = "PT30M"
@@ -228,13 +249,22 @@ function Prepare-AADMigration {
             
             Create-UserFileBackupTask @CreateUserFileBackupTaskParams
 
-            $taskParams = @{
+
+            $RemoveExistingStatusFilesParams = @{
+                LogFolder      = "logs"
+                StatusFileName = "UserFilesBackupStatus.json"
+            }
+            # Remove existing status files
+            Remove-ExistingStatusFiles @RemoveExistingStatusFilesParams
+
+
+            $TriggerScheduledTaskParams = @{
                 TaskPath = "\AAD Migration"
                 TaskName = "User File Backup to OneDrive"
             }
 
             # Call the function with splatting
-            Trigger-ScheduledTask @taskParams
+            Trigger-ScheduledTask @TriggerScheduledTaskParams
 
             # Define the parameters for splatting
             $AnalyzeParams = @{
@@ -251,6 +281,7 @@ function Prepare-AADMigration {
         catch {
             Write-EnhancedLog -Message "An error occurred in Prepare-AADMigration: $($_.Exception.Message)" -Level "ERROR"
             Handle-Error -ErrorRecord $_
+            throw $_
         }
     }
 
