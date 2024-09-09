@@ -120,18 +120,6 @@ function Execute-MigrationCleanupTasks {
   
             # Remove scheduled tasks
             Write-EnhancedLog -Message "Removing scheduled tasks in TaskPath: AAD Migration" -Level "INFO"
-            # $taskParams = @{
-            #     TaskPath = "AAD Migration"
-            # }
-            # Remove-ScheduledTasks @taskParams
-
-            # $taskParams = @{
-            #     TaskPath = "AAD Migration"
-            # }
-            # Unregister-ScheduledTaskWithLogging @taskParams
-
-            # Unregister-ScheduledTaskWithLogging -TaskName $TaskName
-
 
             # Retrieve all tasks in the "AAD Migration" path
             $tasks = Get-ScheduledTask -TaskPath "\AAD Migration\" -ErrorAction SilentlyContinue
@@ -153,7 +141,7 @@ function Execute-MigrationCleanupTasks {
                 TaskPath               = "AAD Migration"
                 TaskName               = "Clear OneDrive Cache"
                 ScriptDirectory        = "C:\ProgramData\AADMigration\Scripts"
-                ScriptName             = "ClearOneDriveCache.ps1"
+                ScriptName             = "ClearOneDriveCache.Task.ps1"
                 TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
                 TaskRepetitionDuration = "P1D"
                 TaskRepetitionInterval = "PT30M"

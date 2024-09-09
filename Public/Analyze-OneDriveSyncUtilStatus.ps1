@@ -48,8 +48,8 @@ function Analyze-OneDriveSyncUtilStatus {
 
     Process {
         try {
-            # Step 1: Remove existing status files
-            Remove-ExistingStatusFiles -LogFolder $LogFolder -StatusFileName $StatusFileName
+            # # Step 1: Remove existing status files
+            # Remove-ExistingStatusFiles -LogFolder $LogFolder -StatusFileName $StatusFileName
 
             # Step 2: Find the new status file
             $statusFile = Find-NewStatusFile -LogFolder $LogFolder -StatusFileName $StatusFileName -MaxRetries $MaxRetries -RetryInterval $RetryInterval
@@ -99,6 +99,7 @@ function Analyze-OneDriveSyncUtilStatus {
         }
         catch {
             Write-EnhancedLog -Message "An error occurred in Analyze-OneDriveSyncUtilStatus function: $($_.Exception.Message)" -Level "ERROR"
+            Write-EnhancedLog -Message "Please check if you are logged in to OneDrive and try again." -Level "ERROR"
             Handle-Error -ErrorRecord $_
             throw $_
         }

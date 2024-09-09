@@ -2,7 +2,7 @@ function Main-MigrateToAADJOnly {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [string]$PPKGName,
+        [string]$PPKGPath,
         
         [Parameter(Mandatory = $false)]
         [string]$DomainLeaveUser,
@@ -28,10 +28,28 @@ function Main-MigrateToAADJOnly {
     Process {
         try {
             # Test provisioning package
-            $TestProvisioningPackParams = @{
-                PPKGName = $PPKGName
+            # $TestProvisioningPackParams = @{
+            #     PPKGName = $PPKGName
+            # }
+            # Test-ProvisioningPack @TestProvisioningPackParams
+
+            # Validate PPKG file exists
+            if (-not (Test-Path -Path $PPKGPath)) {
+                throw "Provisioning package file not found: $PPKGPath"
             }
-            Test-ProvisioningPack @TestProvisioningPackParams
+
+
+            # Extract just the file name from the PPKG path (without extension)
+            $ppkgFileName = [System.IO.Path]::GetFileNameWithoutExtension($PPKGPath)
+
+            # Check if the PPKG is already installed
+            Write-EnhancedLog -Message "Validating if provisioning package is already installed." -Level "INFO"
+            $isInstalled = Validate-PPKGInstallation -PPKGName $ppkgFileName
+  
+
+            if ($isInstalled) {
+                Remove-InstalledPPKG -PackageName $ppkgFileName
+            }
 
             # Add local user
             $AddLocalUserParams = @{
@@ -41,6 +59,8 @@ function Main-MigrateToAADJOnly {
                 Group            = "Administrators"
             }
             Add-LocalUser @AddLocalUserParams
+
+            # Wait-Debugger
 
             # Set autologin
             $SetAutologinParams = @{
@@ -119,10 +139,10 @@ function Main-MigrateToAADJOnly {
                 TempUser         = $TempUser
                 TempUserPassword = $TempUserPassword
                 ComputerName     = "localhost"
-                TaskName         = "PR4B-AADM Launch PSADT for Interactive Migration"
-                TaskPath         = "\AAD Migration\"
             }
             Remove-ADJoin @RemoveADJoinParams
+
+            # Restart-ComputerIfNeeded
 
         }
         catch {

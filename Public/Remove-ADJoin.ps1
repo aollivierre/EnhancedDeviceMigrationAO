@@ -40,9 +40,7 @@ function Remove-ADJoin {
         [string]$DomainLeavePassword,
         [string]$TempUser,
         [string]$TempUserPassword,
-        [string]$ComputerName,
-        [string]$TaskName,
-        [string]$TaskPath
+        [string]$ComputerName
     )
     
     Begin {
@@ -67,7 +65,7 @@ function Remove-ADJoin {
                 Leave-Domain @leaveDomainParams
                 
     
-                Disable-ScheduledTaskByPath -TaskName $TaskName -TaskPath $TaskPath
+                # Disable-ScheduledTaskByPath -TaskName $TaskName -TaskPath $TaskPath
     
                 Manage-NetworkAdapters -Disable
                 Start-Sleep -Seconds 5
@@ -77,7 +75,7 @@ function Remove-ADJoin {
             }
             else {
                 Write-EnhancedLog -Message "Computer is not a domain member, no domain removal needed." -Level "INFO"
-                Disable-ScheduledTaskByPath -TaskName $TaskName -TaskPath $TaskPath
+                # Disable-ScheduledTaskByPath -TaskName $TaskName -TaskPath $TaskPath
                 # Restart-ComputerIfNeeded
             }
         }

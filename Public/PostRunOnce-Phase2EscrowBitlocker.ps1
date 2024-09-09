@@ -165,7 +165,7 @@ function PostRunOnce-Phase2EscrowBitlocker {
                 TaskPath            = "AAD Migration"
                 TaskName            = "Run Post migration cleanup"
                 ScriptDirectory     = "C:\ProgramData\AADMigration\Scripts"
-                ScriptName          = "ExecuteMigrationCleanupTasks.ps1"
+                ScriptName          = "ExecuteMigrationCleanupTasks.Task.ps1"
                 TaskArguments       = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"{ScriptPath}`""
                 TaskPrincipalUserId = "NT AUTHORITY\SYSTEM"
                 TaskRunLevel        = "Highest"
