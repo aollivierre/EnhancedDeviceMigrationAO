@@ -50,7 +50,7 @@ function Set-RegistryValue {
 
             if ($validationBefore) {
                 Write-EnhancedLog -Message "Registry value $RegValName is already correctly set. No action taken." -Level "INFO"
-                return
+                return $true
             }
 
             # Test to see if registry key exists, if it does not exist create it
@@ -69,8 +69,13 @@ function Set-RegistryValue {
                 Write-EnhancedLog -Message "Created registry value: $RegValName with data: $RegValData" -Level "INFO"
                 
                 # Validate after setting the value
-                Validate-RegistryValue -RegKeyPath $RegKeyPath -RegValName $RegValName -ExpectedValData $RegValData
-                return
+                $validationAfter = Validate-RegistryValue -RegKeyPath $RegKeyPath -RegValName $RegValName -ExpectedValData $RegValData
+                if ($validationAfter) {
+                    return $true
+                }
+                else {
+                    return $false
+                }
             }
 
             if ($CurrentValue -ne $RegValData) {
@@ -83,12 +88,18 @@ function Set-RegistryValue {
             }
 
             # Validate after setting the value
-            Validate-RegistryValue -RegKeyPath $RegKeyPath -RegValName $RegValName -ExpectedValData $RegValData
+            $validationAfter = Validate-RegistryValue -RegKeyPath $RegKeyPath -RegValName $RegValName -ExpectedValData $RegValData
+            if ($validationAfter) {
+                return $true
+            }
+            else {
+                return $false
+            }
         }
         catch {
             Write-EnhancedLog -Message "An error occurred in Set-RegistryValue function: $($_.Exception.Message)" -Level "ERROR"
             Handle-Error -ErrorRecord $_
-            throw $_
+            return $false
         }
     }
 
@@ -96,4 +107,24 @@ function Set-RegistryValue {
         Write-EnhancedLog -Message "Exiting Set-RegistryValue function" -Level "Notice"
     }
 }
+
+
+
+
+# # Define your parameters
+# $regKeyPath = "HKCU:\Software\MyApp"
+# $regValName = "Setting"
+# $regValType = "String"
+# $regValData = "Enabled"
+
+# # Call the Set-RegistryValue function and capture the result
+# $setRegistryResult = Set-RegistryValue -RegKeyPath $regKeyPath -RegValName $regValName -RegValType $regValType -RegValData $regValData
+
+# # Build decision-making logic based on the result
+# if ($setRegistryResult -eq $true) {
+#     Write-EnhancedLog -Message "Successfully set the registry value: $regValName at $regKeyPath" -Level "INFO"
+# } else {
+#     Write-EnhancedLog -Message "Failed to set the registry value: $regValName at $regKeyPath" -Level "ERROR"
+# }
+
 

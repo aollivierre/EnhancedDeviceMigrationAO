@@ -56,18 +56,10 @@ function Set-ODKFMRegistrySettings {
 
     Process {
         try {
-            foreach ($setting in $RegistrySettings) {
-                # Define the parameters to be splatted
-                $splatParams = @{
-                    RegKeyPath = $RegKeyPath
-                    RegValName = $setting.RegValName
-                    RegValType = $setting.RegValType
-                    RegValData = $setting.RegValData
-                }
 
-                # Call the function with splatted parameters
-                Set-RegistryValue @splatParams
-            }
+            # Apply the registry settings using the defined hash table
+            Apply-RegistrySettings -RegistrySettings $RegistrySettings
+
         }
         catch {
             Write-EnhancedLog -Message "An error occurred while setting OneDrive KFM registry values: $($_.Exception.Message)" -Level "ERROR"

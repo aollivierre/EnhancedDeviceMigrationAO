@@ -131,6 +131,11 @@ function Main-MigrateToAADJOnly {
             }
             Remove-IntuneMgmt @RemoveIntuneMgmtParams
 
+
+
+            Perform-IntuneCleanup
+
+
             # Remove hybrid join
             Remove-Hybrid
 

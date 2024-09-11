@@ -192,21 +192,8 @@ function PostRunOnce-Phase2EscrowBitlocker {
                 Write-EnhancedLog -Message "BitLocker key for drive $drive escrowed" -Level "INFO"
             }
 
-            # Set registry values
-            foreach ($regPath in $RegistrySettings.Keys) {
-                foreach ($regName in $RegistrySettings[$regPath].Keys) {
-                    $regSetting = $RegistrySettings[$regPath][$regName]
-                    Write-EnhancedLog -Message "Setting registry value $regName at $regPath" -Level "INFO"
-                    $regParams = @{
-                        RegKeyPath = $regPath
-                        RegValName = $regName
-                        RegValType = $regSetting["Type"]
-                        RegValData = $regSetting["Data"]
-                    }
-                    Set-RegistryValue @regParams
-                    Write-EnhancedLog -Message "Registry value $regName at $regPath set" -Level "INFO"
-                }
-            }
+            #Set registry values
+            Apply-RegistrySettings -RegistrySettings $RegistrySettings
 
             # Unblock user input and close form if in Prod mode
             if ($Mode -eq "Prod") {

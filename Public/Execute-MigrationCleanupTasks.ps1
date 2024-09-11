@@ -88,35 +88,149 @@ function Execute-MigrationCleanupTasks {
             Manage-LocalUserAccounts -Mode $Mode
   
             # Set registry values
-            Write-EnhancedLog -Message "Applying registry settings" -Level "INFO"
-            foreach ($regPath in $RegistrySettings.Keys) {
-                foreach ($regName in $RegistrySettings[$regPath].Keys) {
-                    $regSetting = $RegistrySettings[$regPath][$regName]
+            # Write-EnhancedLog -Message "Applying registry settings" -Level "INFO"
+            # foreach ($regPath in $RegistrySettings.Keys) {
+            #     foreach ($regName in $RegistrySettings[$regPath].Keys) {
+            #         $regSetting = $RegistrySettings[$regPath][$regName]
 
-                    if ($null -ne $regSetting["Data"]) {
-                        Write-EnhancedLog -Message "Setting registry value $regName at $regPath" -Level "INFO"
+            #         if ($null -ne $regSetting["Data"]) {
+            #             Write-EnhancedLog -Message "Setting registry value $regName at $regPath" -Level "INFO"
                     
-                        $regParams = @{
-                            RegKeyPath = $regPath
-                            RegValName = $regName
-                            RegValType = $regSetting["Type"]
-                            RegValData = $regSetting["Data"]
-                        }
+            #             $regParams = @{
+            #                 RegKeyPath = $regPath
+            #                 RegValName = $regName
+            #                 RegValType = $regSetting["Type"]
+            #                 RegValData = $regSetting["Data"]
+            #             }
                     
-                        # If the data is an empty string, explicitly set it as such
-                        if ($regSetting["Data"] -eq "") {
-                            $regParams.RegValData = ""
-                        }
+            #             # If the data is an empty string, explicitly set it as such
+            #             if ($regSetting["Data"] -eq "") {
+            #                 $regParams.RegValData = ""
+            #             }
                     
-                        Set-RegistryValue @regParams
-                        Write-EnhancedLog -Message "Registry value $regName at $regPath set" -Level "INFO"
-                    }
-                    else {
-                        Write-EnhancedLog -Message "Skipping registry value $regName at $regPath due to null data" -Level "WARNING"
-                    }
+            #             Set-RegistryValue @regParams
+            #             Write-EnhancedLog -Message "Registry value $regName at $regPath set" -Level "INFO"
+            #         }
+            #         else {
+            #             Write-EnhancedLog -Message "Skipping registry value $regName at $regPath due to null data" -Level "WARNING"
+            #         }
                     
-                }
-            }
+            #     }
+            # }
+
+
+            # Apply the registry settings using the defined hash table
+            Apply-RegistrySettings -RegistrySettings $RegistrySettings
+            
+
+
+
+            # #Region Set registry values
+
+            # # Initialize counters and summary table
+            # $infoCount = 0
+            # $warningCount = 0
+            # $errorCount = 0
+            # # Initialize the summary table using a .NET List for better performance
+            # $summaryTable = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+            # # Set registry values
+            # Write-EnhancedLog -Message "Applying registry settings" -Level "INFO"
+            # foreach ($regPath in $RegistrySettings.Keys) {
+            #     foreach ($regName in $RegistrySettings[$regPath].Keys) {
+            #         $regSetting = $RegistrySettings[$regPath][$regName]
+
+            #         $summaryRow = [PSCustomObject]@{
+            #             RegistryPath  = $regPath
+            #             RegistryName  = $regName
+            #             RegistryValue = if ($null -ne $regSetting["Data"]) { $regSetting["Data"] } else { "null" }
+            #             Status        = ""
+            #         }
+
+            #         if ($null -ne $regSetting["Data"]) {
+            #             Write-EnhancedLog -Message "Setting registry value $regName at $regPath" -Level "INFO"
+            #             $infoCount++
+
+            #             $regParams = @{
+            #                 RegKeyPath = $regPath
+            #                 RegValName = $regName
+            #                 RegValType = $regSetting["Type"]
+            #                 RegValData = $regSetting["Data"]
+            #             }
+
+            #             # If the data is an empty string, explicitly set it as such
+            #             if ($regSetting["Data"] -eq "") {
+            #                 $regParams.RegValData = ""
+            #             }
+
+            #             try {
+            #                 # Set-RegistryValue @regParams
+
+            #                 # Call the Set-RegistryValue function and capture the result
+            #                 $setRegistryResult = Set-RegistryValue @regParams
+
+            #                 # Build decision-making logic based on the result
+            #                 if ($setRegistryResult -eq $true) {
+            #                     Write-EnhancedLog -Message "Successfully set the registry value: $regValName at $regKeyPath" -Level "INFO"
+            #                     $summaryRow.Status = "Success"
+            #                 }
+            #                 else {
+            #                     Write-EnhancedLog -Message "Failed to set the registry value: $regValName at $regKeyPath" -Level "ERROR"
+            #                     $summaryRow.Status = "Failed"
+            #                 }
+
+            #                 Write-EnhancedLog -Message "Registry value $regName at $regPath set" -Level "INFO"
+                            
+            #             }
+            #             catch {
+            #                 Write-EnhancedLog -Message "Error setting registry value $regName at $regPath $($_.Exception.Message)" -Level "ERROR"
+            #                 $errorCount++
+            #                 $summaryRow.Status = "Failed"
+            #             }
+            #         }
+            #         else {
+            #             Write-EnhancedLog -Message "Skipping registry value $regName at $regPath due to null data" -Level "WARNING"
+            #             $warningCount++
+            #             $summaryRow.Status = "Skipped"
+            #         }
+
+            #         $summaryTable.Add($summaryRow)
+            #     }
+            # }
+
+            # # Final Summary Report
+            # Write-EnhancedLog -Message "----------------------------------------" -Level "INFO"
+            # Write-EnhancedLog -Message "Final Summary Report" -Level "NOTICE"
+            # Write-EnhancedLog -Message "Total registry settings processed: $($infoCount + $warningCount + $errorCount)" -Level "INFO"
+            # Write-EnhancedLog -Message "Successfully applied registry settings: $infoCount" -Level "INFO"
+            # Write-EnhancedLog -Message "Skipped registry settings (due to null data): $warningCount" -Level "WARNING"
+            # Write-EnhancedLog -Message "Failed registry settings: $errorCount" -Level "ERROR"
+            # Write-EnhancedLog -Message "----------------------------------------" -Level "INFO"
+
+            # # Color-coded summary for the console
+            # Write-Host "----------------------------------------" -ForegroundColor White
+            # Write-Host "Final Summary Report" -ForegroundColor Cyan
+            # Write-Host "Total registry settings processed: $($infoCount + $warningCount + $errorCount)" -ForegroundColor White
+            # Write-Host "Successfully applied registry settings: $infoCount" -ForegroundColor Green
+            # Write-Host "Skipped registry settings (due to null data): $warningCount" -ForegroundColor Yellow
+            # Write-Host "Failed registry settings: $errorCount" -ForegroundColor Red
+            # Write-Host "----------------------------------------" -ForegroundColor White
+
+            # # Display the summary table of registry keys and their final states
+            # Write-Host "Registry Settings Summary:" -ForegroundColor Cyan
+            # $summaryTable | Format-Table -AutoSize
+
+            # # Optionally log the summary to the enhanced log as well
+            # foreach ($row in $summaryTable) {
+            #     Write-EnhancedLog -Message "RegistryPath: $($row.RegistryPath), RegistryName: $($row.RegistryName), Value: $($row.RegistryValue), Status: $($row.Status)" -Level "INFO"
+            # }
+
+
+            # #endRegion Set registry values
+  
+
+
+            
   
             # Remove scheduled tasks
             Write-EnhancedLog -Message "Removing scheduled tasks in TaskPath: AAD Migration" -Level "INFO"
@@ -177,6 +291,7 @@ function Execute-MigrationCleanupTasks {
         catch {
             Write-EnhancedLog -Message "An error occurred in Execute-MigrationCleanupTasks function: $($_.Exception.Message)" -Level "ERROR"
             Handle-Error -ErrorRecord $_
+            throw $_
         }
     }
   
