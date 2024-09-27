@@ -28,38 +28,43 @@ function PostRunOnce-Phase2EscrowBitlocker {
     Specifies the mode in which the script should run. Options are "Dev" for development mode or "Prod" for production mode. In Dev mode, certain features are skipped, while in Prod mode, all features are executed.
 
     .EXAMPLE
-    $params = @{
-        ImagePath = "C:\ProgramData\AADMigration\Files\MigrationInProgress.bmp"
-        TaskPath = "AAD Migration"
-        TaskName = "Run Post-migration cleanup"
-        ScriptPath = "C:\ProgramData\AADMigration\Scripts\PostRunOnce3.ps1"
-        BitlockerDrives = @("C:", "D:")
-        RegistrySettings = @{
-            "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" = @{
-                "AutoAdminLogon" = @{
-                    "Type" = "DWORD"
-                    "Data" = "0"
-                }
-            }
-            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" = @{
-                "dontdisplaylastusername" = @{
-                    "Type" = "DWORD"
-                    "Data" = "1"
-                }
-                "legalnoticecaption" = @{
-                    "Type" = "String"
-                    "Data" = "Migration Completed"
-                }
-                "legalnoticetext" = @{
-                    "Type" = "String"
-                    "Data" = "This PC has been migrated to Azure Active Directory. Please log in to Windows using your email address and password."
-                }
-            }
+   $RegistrySettings = @(
+        @{
+            RegValName = "AutoAdminLogon"
+            RegValType = "DWORD"
+            RegValData = "0"
+            RegKeyPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+        },
+        @{
+            RegValName = "dontdisplaylastusername"
+            RegValType = "DWORD"
+            RegValData = "1"
+            RegKeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
+        },
+        @{
+            RegValName = "legalnoticecaption"
+            RegValType = "String"
+            RegValData = "Migration Completed"
+            RegKeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
+        },
+        @{
+            RegValName = "legalnoticetext"
+            RegValType = "String"
+            RegValData = "This PC has been migrated to Azure Active Directory. Please log in to Windows using your email address and password."
+            RegKeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
         }
-        RebootAfterCompletion = $false
-        Mode = "Dev"
+    )
+    
+    
+    $PostRunOncePhase2EscrowBitlockerParams = @{
+        ImagePath        = "C:\ProgramData\AADMigration\Files\MigrationInProgress.bmp"
+        TaskPath         = "AAD Migration"
+        TaskName         = "Run Post migration cleanup"
+        BitlockerDrives  = @("C:")
+        RegistrySettings = $RegistrySettings  # Correctly assign the array here
+        Mode             = $mode
     }
-    PostRunOnce-Phase2EscrowBitlocker @params
+    PostRunOnce-Phase2EscrowBitlocker $PostRunOncePhase2EscrowBitlockerParams
     Executes the post-run operations in Dev mode, skipping user input blocking and reboots.
 
     .EXAMPLE
@@ -112,7 +117,10 @@ function PostRunOnce-Phase2EscrowBitlocker {
         [string[]]$BitlockerDrives,
 
         [Parameter(Mandatory = $true)]
-        [hashtable]$RegistrySettings,
+        [hashtable[]]$RegistrySettings,
+
+        # [Parameter(Mandatory = $true)]
+        # $RegKeyPath,
 
         [Parameter(Mandatory = $false)]
         [switch]$RebootAfterCompletion,
@@ -192,8 +200,60 @@ function PostRunOnce-Phase2EscrowBitlocker {
                 Write-EnhancedLog -Message "BitLocker key for drive $drive escrowed" -Level "INFO"
             }
 
+
+
             #Set registry values
-            Apply-RegistrySettings -RegistrySettings $RegistrySettings
+            
+            # Iterate through each registry setting
+            # foreach ($regSetting in $RegistrySettings) {
+            #     $regKeyPath = $regSetting.RegKeyPath
+
+            #     # Apply the registry setting
+            #     Apply-RegistrySettings -RegistrySettings @($regSetting) -RegKeyPath $regKeyPath
+            # }
+
+
+            # Group the registry settings by their RegKeyPath
+            # $groupedRegistrySettings = $RegistrySettings | Group-Object -Property RegKeyPath
+
+            # # Iterate through each group and apply the settings
+            # foreach ($group in $groupedRegistrySettings) {
+            #     $regKeyPath = $group.Name
+            #     $settingsForKey = $group.Group
+
+            #     # Apply the registry settings for each path with all settings at once
+            #     Apply-RegistrySettings -RegistrySettings $settingsForKey -RegKeyPath $regKeyPath
+            # }
+
+
+
+
+            # Create a new hashtable to store settings grouped by their RegKeyPath
+            $groupedSettings = @{}
+
+            # Group the registry settings by their RegKeyPath
+            foreach ($regSetting in $RegistrySettings) {
+                $regKeyPath = $regSetting.RegKeyPath
+
+                if (-not $groupedSettings.ContainsKey($regKeyPath)) {
+                    $groupedSettings[$regKeyPath] = @()
+                }
+
+                # Add the current setting to the appropriate group
+                $groupedSettings[$regKeyPath] += $regSetting
+            }
+
+            # Now apply the grouped registry settings
+            foreach ($regKeyPath in $groupedSettings.Keys) {
+                $settingsForKey = $groupedSettings[$regKeyPath]
+
+                # Call Apply-RegistrySettings once per group with the correct RegKeyPath
+                Apply-RegistrySettings -RegistrySettings $settingsForKey -RegKeyPath $regKeyPath
+            }
+
+
+            # Apply-RegistrySettings -RegistrySettings $RegistrySettings -RegKeyPath $RegKeyPath
+
 
             # Unblock user input and close form if in Prod mode
             if ($Mode -eq "Prod") {

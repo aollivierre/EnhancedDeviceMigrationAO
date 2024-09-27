@@ -52,13 +52,22 @@ function Main-MigrateToAADJOnly {
             }
 
             # Add local user
-            $AddLocalUserParams = @{
-                TempUser         = $TempUser
-                TempUserPassword = $TempUserPassword
-                Description      = "account for autologin"
-                Group            = "Administrators"
+            # $AddLocalUserParams = @{
+            #     TempUser         = $TempUser
+            #     TempUserPassword = $TempUserPassword
+            #     Description      = "account for autologin"
+            #     Group            = "Administrators"
+            # }
+            # Add-LocalUser @AddLocalUserParams
+
+
+            $EnsureUserInLocalAdminGroupParams = @{
+                Username    = $TempUser
+                Password    = $TempUserPassword
+                Description = "account for autologin"
             }
-            Add-LocalUser @AddLocalUserParams
+
+            Ensure-UserInLocalAdminGroup @EnsureUserInLocalAdminGroupParams
 
             # Wait-Debugger
 

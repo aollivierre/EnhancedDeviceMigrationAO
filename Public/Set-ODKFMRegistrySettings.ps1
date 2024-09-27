@@ -46,7 +46,7 @@ function Set-ODKFMRegistrySettings {
         [string]$RegKeyPath,
 
         [Parameter(Mandatory = $true)]
-        [array]$RegistrySettings
+        $RegistrySettings
     )
 
     Begin {
@@ -58,7 +58,7 @@ function Set-ODKFMRegistrySettings {
         try {
 
             # Apply the registry settings using the defined hash table
-            Apply-RegistrySettings -RegistrySettings $RegistrySettings
+            Apply-RegistrySettings -RegistrySettings $RegistrySettings -RegKeyPath $RegKeyPath
 
         }
         catch {

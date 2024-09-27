@@ -8,6 +8,7 @@ function Trigger-ScheduledTask {
     Begin {
         Write-EnhancedLog -Message "Starting Trigger-ScheduledTask function" -Level "NOTICE"
         CheckAndElevate -ElevateIfNotAdmin $true
+        Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
     Process {

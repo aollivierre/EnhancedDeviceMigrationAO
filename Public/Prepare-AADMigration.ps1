@@ -33,6 +33,7 @@ function Prepare-AADMigration {
             # Ensure the target directory exists
             if (-not (Test-Path -Path $MigrationPath)) {
                 New-Item -Path $MigrationPath -ItemType Directory -Force | Out-Null
+                Write-EnhancedLog -Message "New destination directory created: $MigrationPath" -Level "INFO"
             }
 
             # Copy the entire content of $PSScriptRoot to $MigrationPath
@@ -54,8 +55,14 @@ function Prepare-AADMigration {
             # }
 
             # Create a new destination directory
-            New-Item -Path $MigrationPath -ItemType Directory | Out-Null
-            Write-EnhancedLog -Message "New destination directory created: $MigrationPath" -Level "INFO"
+            # New-Item -Path $MigrationPath -ItemType Directory | Out-Null
+
+
+            if (-not (Test-Path -Path $MigrationPath)) {
+                New-Item -Path $MigrationPath -ItemType Directory -Force | Out-Null
+                Write-EnhancedLog -Message "New destination directory created: $MigrationPath" -Level "INFO"
+            }
+            
 
 
             $params = @{

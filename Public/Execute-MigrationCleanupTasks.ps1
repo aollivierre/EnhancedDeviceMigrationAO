@@ -60,7 +60,7 @@ function Execute-MigrationCleanupTasks {
         [string]$TempUser,
   
         [Parameter(Mandatory = $true)]
-        [hashtable]$RegistrySettings,
+        $RegistrySettings,
   
         [Parameter(Mandatory = $true)]
         [string[]]$MigrationDirectories,
@@ -120,8 +120,41 @@ function Execute-MigrationCleanupTasks {
 
 
             # Apply the registry settings using the defined hash table
-            Apply-RegistrySettings -RegistrySettings $RegistrySettings
+            # Apply-RegistrySettings -RegistrySettings $RegistrySettings
+
+            # Iterate through each registry setting
+            # foreach ($regSetting in $RegistrySettings) {
+            #     $regKeyPath = $regSetting.RegKeyPath
+    
+            #     # Apply the registry setting
+            #     Apply-RegistrySettings -RegistrySettings @($regSetting) -RegKeyPath $regKeyPath
+            # }
             
+
+
+
+            # Create a new hashtable to store settings grouped by their RegKeyPath
+            $groupedSettings = @{}
+
+            # Group the registry settings by their RegKeyPath
+            foreach ($regSetting in $RegistrySettings) {
+                $regKeyPath = $regSetting.RegKeyPath
+     
+                if (-not $groupedSettings.ContainsKey($regKeyPath)) {
+                    $groupedSettings[$regKeyPath] = @()
+                }
+     
+                # Add the current setting to the appropriate group
+                $groupedSettings[$regKeyPath] += $regSetting
+            }
+     
+            # Now apply the grouped registry settings
+            foreach ($regKeyPath in $groupedSettings.Keys) {
+                $settingsForKey = $groupedSettings[$regKeyPath]
+     
+                # Call Apply-RegistrySettings once per group with the correct RegKeyPath
+                Apply-RegistrySettings -RegistrySettings $settingsForKey -RegKeyPath $regKeyPath
+            }
 
 
 
