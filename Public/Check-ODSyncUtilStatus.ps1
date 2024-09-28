@@ -56,19 +56,12 @@ function Check-ODSyncUtilStatus {
             MaxRetries     = 3
         }
         Download-ODSyncUtil @DownloadODSyncUtilParams
-        
-
-
-        # Define the log file path
-        # Get the parent of the parent directory of ScriptPath
-        # $parentOfParentPath = (Get-Item -Path $ScriptPath).Parent.Parent.FullName
 
         # Define the log folder path in the user's profile directory
         $logFolder = Join-Path -Path $env:USERPROFILE -ChildPath $LogFolderName
 
         # Define the status file path within the log folder
         $statusFile = Join-Path -Path $logFolder -ChildPath $StatusFileName
-
 
         # Ensure the log directory exists
         if (-not (Test-Path -Path $logFolder)) {
@@ -77,7 +70,6 @@ function Check-ODSyncUtilStatus {
         }
     }
 
-    
     Process {
         try {
             # Define the full path to Get-ODStatus.ps1
@@ -97,39 +89,20 @@ function Check-ODSyncUtilStatus {
             Write-EnhancedLog -Message "Executing $getODStatusScript with non-elevated privileges" -Level "INFO"
             $status = . $getODStatusScript
     
-            # Convert the output directly to JSON and save it
-            # if ($status) {
-            #     Write-EnhancedLog -Message "Saving OneDrive sync status to $statusFile" -Level "INFO"
-            #     $status | ConvertTo-Json -Depth 3 | Out-File -FilePath $statusFile -Force -Encoding utf8
-            # }
-            # else {
-            #     Write-EnhancedLog -Message "Failed to retrieve OneDrive sync status." -Level "ERROR"
-            # }
-
-
-            # Get the currently logged-in username
-            $CurrentUser = "$env:COMPUTERNAME\$env:USERNAME"
-
-            # Read the JSON file
-            $jsonFilePath = $statusFile
-            $jsonData = Get-Content -Path $jsonFilePath | ConvertFrom-Json
-
             # Filter the JSON data to match the currently logged-in user
-            $status = $jsonData | Where-Object { $_.UserName -eq $CurrentUser }
+            $CurrentUser = "$env:COMPUTERNAME\$env:USERNAME"
+            Write-EnhancedLog -Message "Current user detected: $CurrentUser" -Level "INFO"
 
-            # Define the status file path
-            # $statusFile = "path_to_your_status_file.json"  # Update with the correct status file path
-
-            # Save the status to the status file or log an error if retrieval failed
-            if ($status) {
-                Write-EnhancedLog -Message "Saving OneDrive sync status to $statusFile" -Level "INFO"
-                $status | ConvertTo-Json -Depth 3 | Out-File -FilePath $statusFile -Force -Encoding utf8
+            $filteredStatus = $status | Where-Object { $_.UserName -eq $CurrentUser }
+    
+            # Convert the filtered output directly to JSON and save it
+            if ($filteredStatus) {
+                Write-EnhancedLog -Message "Saving filtered OneDrive sync status to $statusFile" -Level "INFO"
+                $filteredStatus | ConvertTo-Json -Depth 3 | Out-File -FilePath $statusFile -Force -Encoding utf8
             }
             else {
-                Write-EnhancedLog -Message "Failed to retrieve OneDrive sync status." -Level "ERROR"
+                Write-EnhancedLog -Message "No matching data found for user: $CurrentUser" -Level "WARNING"
             }
-
-
         }
         catch {
             Write-EnhancedLog -Message "An error occurred in Check-ODSyncUtilStatus function: $($_.Exception.Message)" -Level "ERROR"
@@ -142,7 +115,6 @@ function Check-ODSyncUtilStatus {
             Write-EnhancedLog -Message "Returned to the original directory" -Level "INFO"
         }
     }
-    
 
     End {
         Write-EnhancedLog -Message "Exiting Check-ODSyncUtilStatus function" -Level "Notice"
