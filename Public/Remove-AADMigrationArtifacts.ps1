@@ -24,7 +24,7 @@ function Remove-AADMigrationArtifacts {
     param ()
 
     Begin {
-        Write-AADMigrationLog "Starting AAD migration artifact cleanup..."
+        Write-EnhancedLog -Message "Starting AAD migration artifact cleanup..."
     }
 
     Process {
@@ -45,15 +45,15 @@ function Remove-AADMigrationArtifacts {
             $name = $item.Name
 
             if (Test-Path -Path $path) {
-                Write-AADMigrationLog "Removing $name ($path)..." -Level 'INFO'
+                Write-EnhancedLog -Message "Removing $name ($path)..." -Level 'INFO'
                 Remove-Item -Path $path -Recurse -Force
             }
             else {
-                Write-AADMigrationLog "$name ($path) does not exist, skipping..." -Level 'WARNING'
+                Write-EnhancedLog -Message "$name ($path) does not exist, skipping..." -Level 'WARNING'
             }
         }
 
-        Write-AADMigrationLog "Path cleanup complete." -Level 'NOTICE'
+        Write-EnhancedLog -Message "Path cleanup complete." -Level 'NOTICE'
 
 
 
@@ -61,12 +61,12 @@ function Remove-AADMigrationArtifacts {
         $scheduledTasks = Get-ScheduledTask -TaskPath '\AAD Migration\' -ErrorAction SilentlyContinue
         if ($scheduledTasks) {
             foreach ($task in $scheduledTasks) {
-                Write-AADMigrationLog "Removing scheduled task: $($task.TaskName)..." -Level 'INFO'
+                Write-EnhancedLog -Message "Removing scheduled task: $($task.TaskName)..." -Level 'INFO'
                 Unregister-ScheduledTask -TaskName $task.TaskName -TaskPath $task.TaskPath -Confirm:$false
             }
         }
         else {
-            Write-AADMigrationLog "No scheduled tasks found under \AAD Migration, skipping..." -Level 'WARNING'
+            Write-EnhancedLog -Message "No scheduled tasks found under \AAD Migration, skipping..." -Level 'WARNING'
         }
 
         # Remove the scheduled task folder named AAD Migration
@@ -76,10 +76,10 @@ function Remove-AADMigrationArtifacts {
             $rootFolder = $taskFolder.GetFolder("\")
             $aadMigrationFolder = $rootFolder.GetFolder("AAD Migration")
             $aadMigrationFolder.DeleteFolder("", 0)
-            Write-AADMigrationLog "Scheduled task folder AAD Migration removed successfully." -Level 'INFO'
+            Write-EnhancedLog -Message "Scheduled task folder AAD Migration removed successfully." -Level 'INFO'
         }
         catch {
-            Write-AADMigrationLog "Scheduled task folder AAD Migration does not exist or could not be removed." -Level 'ERROR'
+            Write-EnhancedLog -Message "Scheduled task folder AAD Migration does not exist or could not be removed." -Level 'ERROR'
         }
 
         # Remove the local user called MigrationInProgress
@@ -87,17 +87,17 @@ function Remove-AADMigrationArtifacts {
         try {
             $user = Get-LocalUser -Name $localUser -ErrorAction Stop
             if ($user) {
-                Write-AADMigrationLog "Removing local user $localUser..." -Level 'INFO'
+                Write-EnhancedLog -Message "Removing local user $localUser..." -Level 'INFO'
                 Remove-LocalUser -Name $localUser -Force
             }
         }
         catch {
-            Write-AADMigrationLog "Local user $localUser does not exist, skipping..." -Level 'WARNING'
+            Write-EnhancedLog -Message "Local user $localUser does not exist, skipping..." -Level 'WARNING'
         }
     }
 
     End {
-        Write-AADMigrationLog "AAD migration artifact cleanup completed." -Level 'INFO'
+        Write-EnhancedLog -Message "AAD migration artifact cleanup completed." -Level 'INFO'
     }
 }
 
