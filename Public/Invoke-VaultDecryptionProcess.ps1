@@ -70,7 +70,7 @@ function Invoke-VaultDecryptionProcess {
             $pat = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
         }
         catch {
-            Handle-Error -Message "Failed to convert SecureString to plain text." -ErrorRecord $_
+            Handle-Error -ErrorRecord $_
         }
     }
 
@@ -138,7 +138,7 @@ function Invoke-VaultDecryptionProcess {
             Write-EnhancedLog -Message "Process completed successfully!" -Level 'INFO'
         }
         catch {
-            Handle-Error -Message "An error occurred during the process." -ErrorRecord $_
+            Handle-Error -ErrorRecord $_
         }
     }
 
@@ -149,7 +149,7 @@ function Invoke-VaultDecryptionProcess {
             [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
         }
         catch {
-            Handle-Error -Message "Failed to clean up secure data." -ErrorRecord $_
+            Handle-Error -ErrorRecord $_
         }
 
         Write-EnhancedLog -Message "Exiting Invoke-VaultDecryptionProcess" -Level "Notice"
