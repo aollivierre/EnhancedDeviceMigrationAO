@@ -319,6 +319,12 @@ function Execute-MigrationCleanupTasks {
             Write-EnhancedLog -Message "Migration directories removed: $MigrationDirectories" -Level "INFO"
 
 
+
+
+            Remove-AADMigrationArtifacts
+
+
+
             Write-EnhancedLog -Message "OneDrive cache cleared" -Level "INFO"
         }
         catch {
