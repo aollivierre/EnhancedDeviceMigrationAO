@@ -302,7 +302,7 @@ function Execute-MigrationCleanupTasks {
 
 
             $taskParams = @{
-                TaskPath = "\AAD Migration"
+                TaskPath = "AAD Migration"
                 TaskName = "Clear OneDrive Cache"
             }
 

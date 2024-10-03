@@ -164,7 +164,25 @@ function Prepare-AADMigration {
                 Install-Software @installParams
             }
 
-            # # Example usage with splatting
+            # # # Example usage with splatting
+            # $CreateOneDriveSyncUtilStatusTask = @{
+            #     TaskPath               = "AAD Migration"
+            #     TaskName               = "AADM Get OneDrive Sync Util Status"
+            #     ScriptDirectory        = "C:\ProgramData\AADMigration\Scripts"
+            #     ScriptName             = "Check-ODSyncUtilStatus.Task.ps1"
+            #     TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
+            #     TaskRepetitionDuration = "P1D"
+            #     TaskRepetitionInterval = "PT30M"
+            #     TaskPrincipalGroupId   = "BUILTIN\Users"
+            #     PowerShellPath         = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+            #     TaskDescription        = "AADM Get OneDrive Sync Util Status"
+            #     AtLogOn                = $true
+            # }
+
+            # Create-OneDriveSyncUtilStatusTask @CreateOneDriveSyncUtilStatusTask
+
+
+
             $CreateOneDriveSyncUtilStatusTask = @{
                 TaskPath               = "AAD Migration"
                 TaskName               = "AADM Get OneDrive Sync Util Status"
@@ -173,13 +191,16 @@ function Prepare-AADMigration {
                 TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
                 TaskRepetitionDuration = "P1D"
                 TaskRepetitionInterval = "PT30M"
-                TaskPrincipalGroupId   = "BUILTIN\Users"
                 PowerShellPath         = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-                TaskDescription        = "AADM Get OneDrive Sync Util Status"
+                TaskDescription        = "Get current OneDrive Sync Status and write to event log"
                 AtLogOn                = $true
+                # UseCurrentUser         = $true  # Specify to use the current user
+                TaskPrincipalGroupId   = "BUILTIN\Users"
             }
-
+            
             Create-OneDriveSyncUtilStatusTask @CreateOneDriveSyncUtilStatusTask
+            
+
 
 
             $RemoveExistingStatusFilesParams = @{
@@ -192,7 +213,7 @@ function Prepare-AADMigration {
 
 
             $taskParams = @{
-                TaskPath = "\AAD Migration"
+                TaskPath = "AAD Migration"
                 TaskName = "AADM Get OneDrive Sync Util Status"
             }
 
@@ -240,6 +261,28 @@ function Prepare-AADMigration {
             # 2- copy Downloads folders
             # any other user specific files
 
+
+            # $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+            # Write-Host "Current User: $currentUser"
+
+            # $CreateUserFileBackupTaskParams = @{
+            #     TaskPath               = "AAD Migration"
+            #     TaskName               = "User File Backup to OneDrive"
+            #     ScriptDirectory        = "C:\ProgramData\AADMigration\Scripts"
+            #     ScriptName             = "BackupUserFiles.Task.ps1"
+            #     TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
+            #     TaskRepetitionDuration = "P1D"
+            #     TaskRepetitionInterval = "PT30M"
+            #     TaskPrincipalGroupId   = "BUILTIN\Users"
+            #     PowerShellPath         = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+            #     TaskDescription        = "User File Backup to OneDrive"
+            #     AtLogOn                = $true
+            # }
+            
+            # Create-UserFileBackupTask @CreateUserFileBackupTaskParams
+
+
+
             $CreateUserFileBackupTaskParams = @{
                 TaskPath               = "AAD Migration"
                 TaskName               = "User File Backup to OneDrive"
@@ -248,13 +291,20 @@ function Prepare-AADMigration {
                 TaskArguments          = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -file `"{ScriptPath}`""
                 TaskRepetitionDuration = "P1D"
                 TaskRepetitionInterval = "PT30M"
-                TaskPrincipalGroupId   = "BUILTIN\Users"
                 PowerShellPath         = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
                 TaskDescription        = "User File Backup to OneDrive"
                 AtLogOn                = $true
+                # UseCurrentUser         = $true  # Switch to use the current user
+
+                TaskPrincipalGroupId   = "BUILTIN\Users"
+
             }
             
             Create-UserFileBackupTask @CreateUserFileBackupTaskParams
+            
+
+
+
 
 
             $RemoveExistingStatusFilesParams = @{
@@ -266,7 +316,7 @@ function Prepare-AADMigration {
 
 
             $TriggerScheduledTaskParams = @{
-                TaskPath = "\AAD Migration"
+                TaskPath = "AAD Migration"
                 TaskName = "User File Backup to OneDrive"
             }
 

@@ -13,6 +13,14 @@ function Trigger-ScheduledTask {
 
     Process {
         try {
+            # Validate if the scheduled task exists before triggering
+            $isTaskValid = Validate-ScheduledTask -TaskPath $TaskPath -TaskName $TaskName
+            if (-not $isTaskValid) {
+                Write-EnhancedLog -Message "Validation failed. The scheduled task '$TaskName' does not exist or is invalid." -Level "ERROR"
+                return
+            }
+
+            # Proceed with triggering the task if validation passed
             Write-EnhancedLog -Message "Triggering the scheduled task '$TaskName' under the '$TaskPath' folder..." -Level "INFO"
 
             $startTaskParams = @{
@@ -35,13 +43,3 @@ function Trigger-ScheduledTask {
         Write-EnhancedLog -Message "Exiting Trigger-ScheduledTask function" -Level "NOTICE"
     }
 }
-
-# # Example usage
-# # Define parameters using a hashtable
-# $taskParams = @{
-#     TaskPath = "\AAD Migration"
-#     TaskName = "AADM Get OneDrive Sync Status"
-# }
-
-# # Call the function with splatting
-# Trigger-ScheduledTask @taskParams
