@@ -96,6 +96,10 @@ function Upload-LogsToGitHub {
         $ptr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePAT)
         $PersonalAccessToken = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
 
+        # $PersonalAccessToken
+
+        # Wait-Debugger
+
         # Build Git repo URL
         $RepoUrlSanitized = "https://github.com/$GitUsername/$RepoName.git"
         $RepoUrl = "https://{0}:{1}@github.com/{2}/$RepoName.git" -f $GitUsername, $PersonalAccessToken, $GitUsername
