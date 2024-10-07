@@ -309,6 +309,16 @@ function Execute-MigrationCleanupTasks {
             # Trigger OneDrive Sync Status Scheduled Task
             Trigger-ScheduledTask @taskParams
 
+            Start-Sleep -Seconds '120'
+
+
+            
+            $DisableScheduledTaskByPath = @{
+                TaskName = "Clear OneDrive Cache"
+                TaskPath = "\AAD Migration\"
+            }
+            Disable-ScheduledTaskByPath @DisableScheduledTaskByPath
+
 
             # Remove migration files
             Write-EnhancedLog -Message "Removing migration directories: $MigrationDirectories" -Level "INFO"
