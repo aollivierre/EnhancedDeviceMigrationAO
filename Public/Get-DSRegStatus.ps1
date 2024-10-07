@@ -1,18 +1,4 @@
-
 function Get-DSRegStatus {
-    <#
-    .SYNOPSIS
-    Checks the device's join status (Workgroup, Azure AD Joined, Hybrid Joined, or On-prem Joined) and MDM enrollment (Intune Enrolled or Not).
-
-    .DESCRIPTION
-    The Get-DSRegStatus function runs the dsregcmd /status command and parses its output to determine the device's join status and whether it is enrolled in Microsoft Intune.
-
-    .NOTES
-    Version:        1.3
-    Author:         Abdullah Ollivierre
-    Creation Date:  2024-08-15
-    #>
-
     [CmdletBinding()]
     param ()
 
@@ -26,20 +12,39 @@ function Get-DSRegStatus {
             Write-EnhancedLog -Message "Running dsregcmd /status" -Level "INFO"
             $dsregcmdOutput = dsregcmd /status
 
+            # Log the full dsregcmd output for debugging purposes
+            Write-EnhancedLog -Message "Full dsregcmd output: $dsregcmdOutput" -Level "DEBUG"
+
             # Parse dsregcmd output to determine join status
             Write-EnhancedLog -Message "Parsing dsregcmd output" -Level "INFO"
 
-            $isAzureADJoined = $dsregcmdOutput -match '.*AzureAdJoined\s*:\s*YES'
-            $isHybridJoined = $dsregcmdOutput -match '.*DomainJoined\s*:\s*YES' -and $isAzureADJoined
-            $isOnPremJoined = $dsregcmdOutput -match '.*DomainJoined\s*:\s*YES' -and -not $isAzureADJoined
+            # Split the output into lines for easier parsing
+            $outputLines = $dsregcmdOutput -split "`r`n"
+
+            # Extract values
+            $isAzureADJoined = if ($outputLines -match 'AzureAdJoined\s*:\s*YES') { $true } else { $false }
+            $isHybridJoined = if (($outputLines -match 'DomainJoined\s*:\s*YES') -and $isAzureADJoined) { $true } else { $false }
+            $isOnPremJoined = if (($outputLines -match 'DomainJoined\s*:\s*YES') -and -not $isAzureADJoined) { $true } else { $false }
             $isWorkgroup = -not ($isAzureADJoined -or $isHybridJoined -or $isOnPremJoined)
 
-            # Determine MDM enrollment status
-            $isMDMEnrolled = $dsregcmdOutput -match '.*MDMUrl\s*:\s*(https://manage\.microsoft\.com|https://enrollment\.manage\.microsoft\.com)'
+            # Extract MDM enrollment URL if present by iterating over each line
+            $mdmUrl = $null
+            foreach ($line in $outputLines) {
+                if ($line -match 'MDMUrl\s*:\s*(https://[\S]+)') {
+                    $isMDMEnrolled = $true
+                    $mdmUrl = $matches[1]  # Extract the URL from the match
+                    break  # Exit the loop once the MDM URL is found
+                }
+            }
+
+            if (-not $isMDMEnrolled) {
+                $isMDMEnrolled = $false
+                Write-EnhancedLog -Message "MDM URL not found in dsregcmd output." -Level "INFO"
+            }
 
             # Log the parsed results
             Write-EnhancedLog -Message "Join status parsed: Workgroup: $isWorkgroup, AzureAD: $isAzureADJoined, Hybrid: $isHybridJoined, OnPrem: $isOnPremJoined" -Level "INFO"
-            Write-EnhancedLog -Message "MDM enrollment status: $isMDMEnrolled" -Level "INFO"
+            Write-EnhancedLog -Message "MDM enrollment status: $isMDMEnrolled, MDM URL: $mdmUrl" -Level "INFO"
         }
         catch {
             Write-EnhancedLog -Message "Error while parsing dsregcmd output: $($_.Exception.Message)" -Level "ERROR"
@@ -56,9 +61,43 @@ function Get-DSRegStatus {
             IsHybridJoined  = $isHybridJoined
             IsOnPremJoined  = $isOnPremJoined
             IsMDMEnrolled   = $isMDMEnrolled
+            MDMUrl          = $mdmUrl
         }
     }
 }
+
+
+# # Example usage to print out the values
+# $dsregStatus = Get-DSRegStatus
+
+# # Output to the console
+# Write-Host "Device Join Status:"
+# Write-Host "-------------------"
+# Write-Host "Is Workgroup: " $dsregStatus.IsWorkgroup
+# Write-Host "Is Azure AD Joined: " $dsregStatus.IsAzureADJoined
+# Write-Host "Is Hybrid Joined: " $dsregStatus.IsHybridJoined
+# Write-Host "Is On-prem Joined: " $dsregStatus.IsOnPremJoined
+# Write-Host "MDM Enrollment: " ($dsregStatus.IsMDMEnrolled ? "Yes" : "No")
+# if ($dsregStatus.MDMUrl) {
+#     Write-Host "MDM URL: " $dsregStatus.MDMUrl
+# }
+
+
+# # Example usage to print out the values
+# $dsregStatus = Get-DSRegStatus
+
+# # Output to the console
+# Write-Host "Device Join Status:"
+# Write-Host "-------------------"
+# Write-Host "Is Workgroup: " $dsregStatus.IsWorkgroup
+# Write-Host "Is Azure AD Joined: " $dsregStatus.IsAzureADJoined
+# Write-Host "Is Hybrid Joined: " $dsregStatus.IsHybridJoined
+# Write-Host "Is On-prem Joined: " $dsregStatus.IsOnPremJoined
+# Write-Host "MDM Enrollment: " ($dsregStatus.IsMDMEnrolled ? "Yes" : "No")
+# if ($dsregStatus.MDMUrl) {
+#     Write-Host "MDM URL: " $dsregStatus.MDMUrl
+# }
+
 
 
 #Here is an example for a decision-making tree

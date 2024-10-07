@@ -21,6 +21,9 @@ function Invoke-VaultDecryptionProcess {
     
         [Parameter(Mandatory = $true, HelpMessage = "Specify the path to the ZIP file to be decrypted.")]
         [string] $ZipFilePath = "C:\temp\vault.zip",
+
+        [Parameter(Mandatory = $true, HelpMessage = "Specify the path to the ZIP directory to be unzipped.")]
+        [string] $UnzipDestinationDirectory = "C:\temp\vault",
     
         [Parameter(Mandatory = $true, HelpMessage = "Specify the path to the Base64-encoded certificate file.")]
         [string] $CertBase64Path = "C:\temp\vault\certs\cert.pfx.base64",
@@ -91,7 +94,7 @@ function Invoke-VaultDecryptionProcess {
             # Step 2: Unzip the downloaded file
             $unzipParams = @{
                 ZipFilePath          = $DestinationPath
-                DestinationDirectory = "C:\temp\vault"
+                DestinationDirectory = $UnzipDestinationDirectory
             }
             Write-EnhancedLog -Message "Unzipping the downloaded asset..." -Level 'INFO'
             Unzip-Directory @unzipParams
