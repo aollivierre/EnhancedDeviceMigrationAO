@@ -147,18 +147,18 @@ function Create-InteractiveMigrationTaskConsoleMode {
 }
 
 # Example usage with splatting
-$CreateInteractiveMigrationTaskConsoleModeParams = @{
-    TaskPath               = "AAD Migration"
-    TaskName               = "PR4B-AADM Launch PSADT for Interactive Migration"
-    ServiceUIPath          = "C:\ProgramData\AADMigration\ServiceUI.exe"
-    ScriptDirectory        = "C:\ProgramData\AADMigration\PSAppDeployToolkit\Toolkit"
-    ScriptName             = "Execute-PSADTConsole.ps1"
-    TaskPrincipalUserId    = "NT AUTHORITY\SYSTEM"  # Run as SYSTEM
-    TaskRunLevel           = "Highest"             # Highest privileges
-    PowerShellPath         = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-    TaskDescription        = "AADM Launch PSADT for Interactive Migration Version 1.0"
-    AtLogOn                = $true
-    Delay                  = "PT2H"  # Optional: 2 hours delay
-}
+# $CreateInteractiveMigrationTaskConsoleModeParams = @{
+#     TaskPath               = "AAD Migration"
+#     TaskName               = "PR4B-AADM Launch PSADT for Interactive Migration"
+#     ServiceUIPath          = "C:\ProgramData\AADMigration\ServiceUI.exe"
+#     ScriptDirectory        = "C:\ProgramData\AADMigration\PSAppDeployToolkit\Toolkit"
+#     ScriptName             = "Execute-PSADTConsole.ps1"
+#     TaskPrincipalUserId    = "NT AUTHORITY\SYSTEM"  # Run as SYSTEM
+#     TaskRunLevel           = "Highest"             # Highest privileges
+#     PowerShellPath         = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+#     TaskDescription        = "AADM Launch PSADT for Interactive Migration Version 1.0"
+#     AtLogOn                = $true
+#     Delay                  = "PT2H"  # Optional: 2 hours delay
+# }
 
-Create-InteractiveMigrationTaskConsoleMode @CreateInteractiveMigrationTaskConsoleModeParams
+# Create-InteractiveMigrationTaskConsoleMode @CreateInteractiveMigrationTaskConsoleModeParams
