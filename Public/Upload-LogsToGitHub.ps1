@@ -92,6 +92,14 @@ function Upload-LogsToGitHub {
         Write-EnhancedLog -Message "Starting Upload-LogsToGitHub function" -Level "NOTICE"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
 
+
+        $params = @{
+            MinVersion   = [version]"2.46.0"
+            RegistryPath = "HKLM:\SOFTWARE\GitForWindows"
+            ExePath      = "C:\Program Files\Git\bin\git.exe"
+        }
+        Ensure-GitIsInstalled @params
+
         # Convert SecureString to plain text
         $ptr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecurePAT)
         $PersonalAccessToken = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
@@ -135,18 +143,43 @@ function Upload-LogsToGitHub {
         }
         Zip-Directory @params
 
+
         # Ensure zip file was created
         if (-Not (Test-Path -Path $TempZipFile)) {
-            Write-EnhancedLog -Message "Failed to zip the logs folder." -ForegroundColor Red
+            Write-EnhancedLog -Message "Failed to zip the logs folder. File not found: $TempZipFile" -ForegroundColor Red
             exit 1
+        }
+        else {
+            Write-EnhancedLog -Message "Zip file created successfully at $TempZipFile" -ForegroundColor Green
+        }
+
+        # Check if Git executable path is valid
+        if (-Not (Test-Path -Path $GitExePath)) {
+            Write-EnhancedLog -Message "Git executable not found at path: $GitExePath" -ForegroundColor Red
+            exit 1
+        }
+        else {
+            Write-EnhancedLog -Message "Git executable found at path: $GitExePath" -ForegroundColor Green
         }
 
         # Clone the repository
         Set-Location -Path $TempGitPath
         $RepoPath = Join-Path -Path $TempGitPath -ChildPath $RepoName
         if (-Not (Test-Path -Path $RepoPath)) {
-            Write-EnhancedLog -Message "Cloning repository from $RepoUrlSanitized..."
+            Write-EnhancedLog -Message "Cloning repository from $RepoUrlSanitized to $RepoPath..."
             & "$GitExePath" clone $RepoUrl
+
+            # Check if the repository was cloned successfully
+            if (Test-Path -Path $RepoPath) {
+                Write-EnhancedLog -Message "Repository cloned successfully to $RepoPath" -ForegroundColor Green
+            }
+            else {
+                Write-EnhancedLog -Message "Failed to clone the repository from $RepoUrlSanitized" -ForegroundColor Red
+                exit 1
+            }
+        }
+        else {
+            Write-EnhancedLog -Message "Repository already exists at $RepoPath. Skipping clone operation." -ForegroundColor Yellow
         }
 
         # Set up folder structure for logs
@@ -188,8 +221,8 @@ function Upload-LogsToGitHub {
 
         # Clean up temporary directories
         Set-Location -Path "C:\" # Ensure we're not inside the Git directory
-        Remove-Item -Path $TempGitPath -Recurse -Force
-        Write-EnhancedLog -Message "Process completed and temp $TempGitPath directory cleaned up." -ForegroundColor Green
+        # Remove-Item -Path $TempGitPath -Recurse -Force
+        # Write-EnhancedLog -Message "Process completed and temp $TempGitPath directory cleaned up." -ForegroundColor Green
 
     }
     catch {
