@@ -52,7 +52,18 @@ function Analyze-OneDriveSyncUtilStatus {
             # Remove-ExistingStatusFiles -LogFolder $LogFolder -StatusFileName $StatusFileName
 
             # Step 2: Find the new status file
-            $statusFile = Find-NewStatusFile -LogFolder $LogFolder -StatusFileName $StatusFileName -MaxRetries $MaxRetries -RetryInterval $RetryInterval
+            # Define a hashtable for splatting
+            $findStatusFileParams = @{
+                LogFolder      = $LogFolder
+                StatusFileName = $StatusFileName
+                MaxRetries     = $MaxRetries
+                RetryInterval  = $RetryInterval
+            }
+
+            # Use splatting to call the function
+            $statusFile = Find-NewStatusFile @findStatusFileParams
+
+            # Wait-Debugger
 
             # Step 3: Analyze the new status file
             Write-EnhancedLog -Message "Reading status file: $($statusFile.FullName)" -Level "INFO"

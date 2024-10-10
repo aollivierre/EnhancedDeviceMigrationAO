@@ -30,26 +30,21 @@ function Find-NewStatusFile {
 
     .LINK
     https://github.com/yourproject/documentation
-
     #>
 
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true,
-            HelpMessage = "Specify the log folder path.")]
+        [Parameter(Mandatory = $true, HelpMessage = "Specify the log folder path.")]
         [string]$LogFolder,
 
-        [Parameter(Mandatory = $true,
-            HelpMessage = "Specify the status file name.")]
+        [Parameter(Mandatory = $true, HelpMessage = "Specify the status file name.")]
         [string]$StatusFileName,
 
-        [Parameter(Mandatory = $true,
-            HelpMessage = "Specify the maximum number of retries.")]
+        [Parameter(Mandatory = $true, HelpMessage = "Specify the maximum number of retries.")]
         [ValidateRange(1, 100)]
         [int]$MaxRetries,
 
-        [Parameter(Mandatory = $true,
-            HelpMessage = "Specify the interval (in seconds) between retries.")]
+        [Parameter(Mandatory = $true, HelpMessage = "Specify the interval (in seconds) between retries.")]
         [ValidateRange(1, 60)]
         [int]$RetryInterval
     )
@@ -70,6 +65,7 @@ function Find-NewStatusFile {
                 Write-EnhancedLog -Message "Attempt $($retryCount + 1) of $MaxRetries to find status file" -Level "INFO"
 
                 if ($isSystem) {
+                    # Running as SYSTEM: check all user profiles except Public and Default profiles
                     $userProfiles = Get-ChildItem 'C:\Users' -Directory | Where-Object { $_.Name -notlike "Public" -and $_.Name -notlike "Default*" }
                     foreach ($profile in $userProfiles) {
                         $profileLogFolder = Join-Path -Path $profile.FullName -ChildPath $LogFolder
@@ -84,13 +80,22 @@ function Find-NewStatusFile {
                     }
                 }
                 else {
-                    $logFolder = Join-Path -Path $env:USERPROFILE -ChildPath $LogFolder
-                    $statusFile = Join-Path -Path $logFolder -ChildPath $StatusFileName
-                    Write-EnhancedLog -Message "Checking status file in current user's profile: $logFolder" -Level "INFO"
+                    # Not running as SYSTEM: check only the current user's profile
+                    try {
+                        $logFolderInUserProfile = Join-Path -Path $env:USERPROFILE -ChildPath $LogFolder
+                        $statusFilePath = Join-Path -Path $logFolderInUserProfile -ChildPath $StatusFileName
+                        # Wait-Debugger
+                        Write-EnhancedLog -Message "Checking status file in current user's profile: $statusFilePath" -Level "INFO"
 
-                    if (Test-Path -Path $statusFile) {
-                        $fileFound = $true
-                        Write-EnhancedLog -Message "Status file found: $statusFile" -Level "INFO"
+                        if (Test-Path -Path $statusFilePath) {
+                            $fileFound = $true
+                            $statusFile = Get-Item -Path $statusFilePath
+                            Write-EnhancedLog -Message "Status file found: $statusFilePath" -Level "INFO"
+                        }
+                    }
+                    catch {
+                        Write-EnhancedLog -Message "An error occurred while checking the current user's profile: $($_.Exception.Message)" -Level "ERROR"
+                        Handle-Error -ErrorRecord $_
                     }
                 }
 
@@ -120,3 +125,4 @@ function Find-NewStatusFile {
         return $statusFile
     }
 }
+
