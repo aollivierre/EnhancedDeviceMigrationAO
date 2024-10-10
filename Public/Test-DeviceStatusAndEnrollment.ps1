@@ -35,7 +35,7 @@ function Test-DeviceStatusAndEnrollment {
         [string]$Title,
         [string]$Message,
         [string]$ScriptPath,
-        [Switch]$ExitOnCondition
+        [bool]$ExitOnCondition = $true
         
     )
     
