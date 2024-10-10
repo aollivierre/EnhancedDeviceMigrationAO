@@ -34,7 +34,8 @@ function Test-DeviceStatusAndEnrollment {
 
         [string]$Title,
         [string]$Message,
-        [string]$ScriptPath
+        [string]$ScriptPath,
+        [Switch]$ExitOnCondition
         
     )
     
@@ -175,6 +176,19 @@ function Test-DeviceStatusAndEnrollment {
 
             Show-DeviceStatusForm
             # exit 0 # Do not migrate: Device is Azure AD Joined and Intune Enrolled
+
+
+
+            if ($ExitOnCondition) {
+                Write-Host "Exiting script with code 0 as per user option."
+                exit 0 # Do not migrate: Device is Azure AD Joined and Intune Enrolled
+            }
+            else {
+                Write-Host "ExitOnCondition switch is not set. Continuing execution."
+            }
+
+
+
         }
         else {
 
