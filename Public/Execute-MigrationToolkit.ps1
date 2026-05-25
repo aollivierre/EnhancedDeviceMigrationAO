@@ -1,4 +1,4 @@
-﻿function Execute-MigrationToolkit {
+function Execute-MigrationToolkit {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]

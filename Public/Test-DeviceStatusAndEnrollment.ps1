@@ -18,7 +18,7 @@ function Test-DeviceStatusAndEnrollment {
     Example 1:
     Test-DeviceStatusAndEnrollment
 
-    This example checks the current device’s join status and Intune (MDM) enrollment status, logs the results, and displays them in a form and the console.
+    This example checks the current device[U+2019]s join status and Intune (MDM) enrollment status, logs the results, and displays them in a form and the console.
 
 .NOTES
     - This function relies on the `Get-DSRegStatus` function to retrieve the device's registration and join status.

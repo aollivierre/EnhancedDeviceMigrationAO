@@ -265,7 +265,7 @@ function Prepare-AADMigration {
                 
             #     TaskPrincipalGroupId = "BUILTIN\Users"  # Specify the user group under which the task will run.
             #                                             # Use this if you want the task to run under a specific group (e.g., "Administrators" or "Users").
-            #                                             # Leave this as is if you don’t need to specify a custom group and are using UseCurrentUser.
+            #                                             # Leave this as is if you don[U+2019]t need to specify a custom group and are using UseCurrentUser.
             
             #     ### VBS Hidden Execution (Optional) ###
             #     HideWithVBS          = $true  # Set to `$true` if you want the task to run using a hidden VBScript (prevents a visible PowerShell window).
@@ -493,7 +493,7 @@ function Prepare-AADMigration {
                 
             #     TaskPrincipalGroupId = "BUILTIN\Users"  # Specify the user group under which the task will run.
             #     # Use this if you want the task to run under a specific group (e.g., "Administrators" or "Users").
-            #     # Leave this as is if you don’t need to specify a custom group and are using UseCurrentUser.
+            #     # Leave this as is if you don[U+2019]t need to specify a custom group and are using UseCurrentUser.
             
             #     ### VBS Hidden Execution (Optional) ###
             #     HideWithVBS          = $true  # Set to `$true` if you want the task to run using a hidden VBScript (prevents a visible PowerShell window).
